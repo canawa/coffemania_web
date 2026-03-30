@@ -7,7 +7,11 @@ class User(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: int
+    promo_code: str | None = None
 
 class VpnConfiguration(BaseModel):
     duration: int
     country: str
+
+class ReferralCodeRequest(BaseModel):
+    code: str

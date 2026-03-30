@@ -1,0 +1,109 @@
+"use client";
+
+import Link from "next/link";
+
+export default function TermsPage() {
+  return (
+    <div className="min-h-screen bg-surface text-on-surface selection:bg-tertiary-fixed">
+      <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a] border-none shadow-none">
+        <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+          <Link
+            className="flex items-center gap-2 text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff]"
+            href="/"
+          >
+            <img src="/logo.svg" alt="Логотип" className="w-8 h-8 object-contain" />
+            <div>
+              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span> ВПН
+            </div>
+          </Link>
+          <Link
+            className="bg-primary text-on-primary px-6 py-2 rounded-full font-bold hover:scale-105 active:scale-95 transition-all"
+            href="/profile"
+          >
+            Личный кабинет
+          </Link>
+        </div>
+        <div className="bg-surface-container dark:bg-[#2a2a28] h-px w-full" />
+      </nav>
+
+      <main className="px-8 py-14 md:py-20">
+        <div className="max-w-4xl mx-auto bg-surface-container-lowest border border-outline-variant/15 rounded-2xl p-8 md:p-12 shadow-sm">
+          <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary tracking-tight">
+            Условия пользования
+          </h1>
+          <p className="mt-4 text-on-surface-variant">
+            Настоящие условия регулируют порядок предоставления и использования цифрового сервиса
+            VPN под брендом Coffee Mania VPN. Начиная использование сервиса, пользователь подтверждает
+            ознакомление и согласие с настоящими условиями.
+          </p>
+
+          <section className="mt-10 space-y-6 text-on-surface-variant leading-relaxed">
+            <div>
+              <h2 className="text-xl font-bold text-primary">1. Предмет услуги</h2>
+              <p>
+                Сервис предоставляет пользователю ограниченную, неисключительную и отзывную возможность
+                подключения к VPN-инфраструктуре для целей обеспечения конфиденциальности трафика и
+                удаленного доступа к сети Интернет на условиях выбранного тарифа.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">2. Порядок доступа</h2>
+              <p>
+                Доступ предоставляется после регистрации учетной записи, внесения оплаты и генерации
+                ключа подключения. Срок действия доступа определяется выбранной длительностью и
+                исчисляется в соответствии с параметрами, указанными в личном кабинете.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">3. Допустимое использование</h2>
+              <p>
+                Пользователь обязуется использовать сервис исключительно в законных целях, соблюдать
+                применимые нормы права и не осуществлять действий, направленных на нарушение
+                работоспособности сервиса, сетевой инфраструктуры или прав третьих лиц.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">4. Ограничение ответственности</h2>
+              <p>
+                Сервис предоставляется по модели "как есть". Поставщик предпринимает разумные меры по
+                обеспечению доступности и безопасности, однако не гарантирует абсолютную бесперебойность,
+                отсутствие задержек, блокировок со стороны третьих лиц или совместимость со всеми
+                устройствами и сетевыми условиями.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">5. Оплата и возврат</h2>
+              <p>
+                Стоимость доступа определяется действующими тарифами в интерфейсе сервиса на момент
+                покупки. Уплаченные средства учитываются в балансе пользователя. Возвраты и иные
+                финансовые операции осуществляются в порядке, предусмотренном применимым законодательством
+                и внутренними правилами платежной обработки.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">6. Приостановка и прекращение доступа</h2>
+              <p>
+                Поставщик вправе ограничить или прекратить доступ при выявлении злоупотреблений, нарушений
+                настоящих условий, требований безопасности или обязательных предписаний компетентных
+                органов.
+              </p>
+            </div>
+
+            <div>
+              <h2 className="text-xl font-bold text-primary">7. Изменение условий</h2>
+              <p>
+                Поставщик вправе обновлять настоящие условия. Актуальная редакция публикуется на данной
+                странице и применяется с момента размещения, если иное не предусмотрено законом.
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  );
+}

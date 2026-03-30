@@ -1,10 +1,33 @@
 "use client";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
+  const [isCheckingCabinet, setIsCheckingCabinet] = useState(false);
+  const router = useRouter();
+
+  const handleCabinetClick = async () => {
+    if (isCheckingCabinet) return;
+    setIsCheckingCabinet(true);
+    try {
+      const res = await fetch("http://localhost:8000/balance", {
+        method: "GET",
+        credentials: "include",
+      });
+      if (res.ok) {
+        router.push("/profile");
+      } else {
+        router.push("/register");
+      }
+    } catch {
+      router.push("/register");
+    } finally {
+      setIsCheckingCabinet(false);
+    }
+  };
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-full">
       <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a] border-none shadow-none">
@@ -38,12 +61,14 @@ export default function Home() {
               Инструкции
             </a>
           </div>
-          <Link
+          <button
             className="bg-primary text-on-primary px-6 py-2 rounded-full font-bold hover:scale-105 active:scale-95 transition-all"
-            href="/register"
+            onClick={handleCabinetClick}
+            disabled={isCheckingCabinet}
+            type="button"
           >
-            Личный кабинет
-          </Link>
+            {isCheckingCabinet ? "Проверяем..." : "Личный кабинет"}
+          </button>
         </div>
         <div className="bg-surface-container dark:bg-[#2a2a28] h-px w-full" />
       </nav>
@@ -366,13 +391,13 @@ export default function Home() {
             </a>
             <a
               className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] transition-colors font-body text-sm uppercase tracking-widest"
-              href="#"
+              href="/privacy"
             >
               Политика конфиденциальности
             </a>
             <a
               className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] transition-colors font-body text-sm uppercase tracking-widest"
-              href="#"
+              href="/terms"
             >
               Условия использования
             </a>

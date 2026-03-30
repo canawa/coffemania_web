@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 export default function ProfilePage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
@@ -14,6 +15,7 @@ export default function ProfilePage() {
   const [isBuyingKey, setIsBuyingKey] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
   const [copyToast, setCopyToast] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState("");
   const [vpnKeys, setVpnKeys] = useState<
     Array<{
       id: number;
@@ -402,9 +404,15 @@ export default function ProfilePage() {
       credentials: "include",
       body: JSON.stringify({
         amount: amount,
+        promo_code: promoCode.trim() ? promoCode.trim().toUpperCase() : null,
       }),
     });
     const data = await res.json();
+    if (!res.ok) {
+      setCopyToast(data?.message ?? `Ошибка ${res.status}`);
+      setTimeout(() => setCopyToast(null), 2000);
+      return;
+    }
     window.open(data.confirmation.confirmation_url, "_blank");
     const interval = setInterval(async () => {
       const result = await fetch(`http://localhost:8000/check_payment?payment_id=${data.id}`, {
@@ -589,11 +597,11 @@ export default function ProfilePage() {
             <span className="material-symbols-outlined">vpn_key</span>
             <span className="font-label">Мои ключи</span>
           </a>
-
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="#">
-            <span className="material-symbols-outlined">settings</span>
-            <span className="font-label">Настройки</span>
+          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/referral">
+            <span className="material-symbols-outlined">redeem</span>
+            <span className="font-label">Реферальная программа</span>
           </a>
+
           <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="#">
             <span className="material-symbols-outlined">help</span>
             <span className="font-label">Помощь</span>
@@ -699,15 +707,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {expired ? (
-                        <button
-                          className="bg-primary text-on-primary px-5 py-2 rounded-full text-sm font-bold hover:bg-primary-container transition-colors shrink-0"
-                          type="button"
-                          onClick={() => setIsAddKeyOpen(true)}
-                        >
-                          Продлить
-                        </button>
-                      ) : (
+                      {!expired ? (
                         <button
                           className="p-3 bg-secondary-container text-primary rounded-full hover:bg-tertiary-fixed transition-colors shrink-0"
                           type="button"
@@ -716,7 +716,7 @@ export default function ProfilePage() {
                         >
                           <span className="material-symbols-outlined">content_copy</span>
                         </button>
-                      )}
+                      ) : null}
                     </div>
                   );
                 })}
@@ -737,14 +737,14 @@ export default function ProfilePage() {
             </div>
 
             {/* Referral Banner */}
-            <div className="relative h-48 rounded-xl overflow-hidden group">
+            <Link href="/referral" className="relative h-48 rounded-xl overflow-hidden group block">
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
               <img alt="Coffee beans" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="top view of roasted coffee beans scattered on a rustic wooden surface with warm atmospheric lighting and rich textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoHgBcHzcfd54lX_wGAEV6qu16kOltrrn0XE4mAEBm80zAcZmJkyH9cl1-7DO3pKUGYEcJG3PaEKY4-b_7dSQasThrETVnGnQe6MK7w51KCAb4prMC1tyl7_EWmLLDgPYxY9Iexd0Cu37Lw4ydX_LWBgDOHbiwS6oOE9A2irfjSaMlwzWkbGqM7nwXLAcaS5PhtosE00iQ_M3IPQdl568ujAvr_-tUsOwv-XfmU90ZeJNCtEc-w8ctV1n_l4OOcp6lx-dLplniSvM" />
               <div className="absolute bottom-4 left-4 right-4 z-20">
                 <p className="text-white font-bold leading-tight">Зарабатывай вместе с нами!</p>
-                <button className="mt-2 text-[10px] text-tertiary-fixed uppercase font-bold tracking-widest">Узнать больше</button>
+                <span className="mt-2 inline-block text-[10px] text-tertiary-fixed uppercase font-bold tracking-widest">Узнать больше</span>
               </div>
-            </div>
+            </Link>
           </aside>
         </div>
       </main>
@@ -753,8 +753,8 @@ export default function ProfilePage() {
       <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#2a2a28] bg-[#fbf9f5] dark:bg-[#1b1c1a] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">О нас</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">Политика конфиденциальности</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">Условия использования</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">Поддержка</a>
         </div>
         <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
@@ -797,6 +797,18 @@ export default function ProfilePage() {
                   />
                   <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant">₽</span>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-on-surface-variant mb-3 uppercase tracking-widest">
+                  ПРОМОКОД
+                </label>
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder="Введите промокод"
+                  className="w-full bg-surface-container-high text-primary font-semibold rounded-xl px-4 py-4 outline-none border-2 border-transparent focus:border-tertiary-fixed transition-colors"
+                />
               </div>
             </div>
             <div className="p-6 bg-surface-container-low border-t border-outline-variant/20">

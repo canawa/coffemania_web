@@ -22,7 +22,8 @@ def create_tables():
             amount REAL NOT NULL,
             credited BOOLEAN NOT NULL DEFAULT 0,
             type TEXT NOT NULL,
-            date TEXT NOT NULL
+            date TEXT NOT NULL,
+            promo_code TEXT
         )
         """)
         cursor.execute("""
@@ -36,4 +37,27 @@ def create_tables():
             expires_at TEXT
         )
         """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS referral_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL UNIQUE,
+            code TEXT NOT NULL UNIQUE,
+            created_at TEXT NOT NULL
+        )
+        """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS payment_contexts (
+            payment_id TEXT NOT NULL UNIQUE,
+            email TEXT NOT NULL,
+            promo_code TEXT,
+            created_at TEXT NOT NULL
+        )
+        """)
+
+        # Backward-compatible migration for existing DBs.
+        cursor.execute("PRAGMA table_info(transactions)")
+        existing_cols = {row[1] for row in cursor.fetchall()}
+        if "promo_code" not in existing_cols:
+            cursor.execute("ALTER TABLE transactions ADD COLUMN promo_code TEXT")
+
         con.commit()

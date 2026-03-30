@@ -10,7 +10,7 @@ from uuid import uuid4
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3 as sq
 from database import create_tables
-from models import User, PaymentRequest, VpnConfiguration
+from models import User, PaymentRequest, VpnConfiguration, ReferralCodeRequest
 import jwt
 from datetime import datetime, timedelta
 import time
@@ -47,6 +47,15 @@ app.add_middleware(
 @app.get("/")
 def read_root():
     return {"message": "Hello, World!"}
+
+
+def normalize_referral_code(value: str | None) -> str | None:
+    if not value:
+        return None
+    code = value.strip()
+    if not code:
+        return None
+    return code
 
 @app.post("/login")
 def login(payload: LoginRequest):
@@ -159,6 +168,24 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
             status_code=401,
         )
     
+    promo_code = normalize_referral_code(payment.promo_code)
+    if payment.promo_code and not promo_code:
+        return JSONResponse(
+            content={"status": "error", "message": "Промокод не может быть пустым"},
+            status_code=400,
+        )
+
+    if promo_code:
+        with sq.connect("database.db") as con:
+            cur = con.cursor()
+            cur.execute("SELECT email FROM referral_codes WHERE code = ? LIMIT 1", (promo_code,))
+            owner = cur.fetchone()
+        if not owner:
+            return JSONResponse(
+                content={"status": "error", "message": "Промокод не найден"},
+                status_code=400,
+            )
+
     yoo_payment = Payment.create({
     "amount": {
         "value": payment.amount,
@@ -171,6 +198,17 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
     "capture": True,
     "description": "Пополнение баланса"
         }, str(uuid4()))
+
+    with sq.connect("database.db") as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT OR REPLACE INTO payment_contexts (payment_id, email, promo_code, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (yoo_payment.id, payload["email"], promo_code, datetime.now().isoformat()),
+        )
+        con.commit()
 
     return yoo_payment
 
@@ -208,18 +246,25 @@ def check_payment_yookassa_status(payment_id, email):
 
     with sq.connect("database.db") as con:
         cur = con.cursor()
+        cur.execute(
+            "SELECT promo_code FROM payment_contexts WHERE payment_id = ? LIMIT 1",
+            (payment_id,),
+        )
+        ctx = cur.fetchone()
+        promo_code = ctx[0] if ctx else None
 
         try:
             cur.execute("""
                 INSERT INTO transactions
-                (payment_id, email, amount, type, date)
-                VALUES (?, ?, ?, ?, ?)
+                (payment_id, email, amount, type, date, promo_code)
+                VALUES (?, ?, ?, ?, ?, ?)
             """, (
                 payment_id,
                 email,
                 amount,
                 "yookassa",
-                datetime.now().isoformat()
+                datetime.now().isoformat(),
+                promo_code,
             ))
 
             # только если INSERT прошёл — начисляем баланс
@@ -228,6 +273,8 @@ def check_payment_yookassa_status(payment_id, email):
                 SET balance = COALESCE(balance, 0) + ?
                 WHERE email = ?
             """, (amount, email))
+
+            cur.execute("DELETE FROM payment_contexts WHERE payment_id = ?", (payment_id,))
 
             con.commit()
             return True
@@ -278,6 +325,91 @@ def get_vpn_keys(request: Request):
         rows = cur.fetchall()
 
     return [dict(r) for r in rows]
+
+
+@app.get("/referral")
+def get_referral(request: Request):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    with sq.connect("database.db") as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT code FROM referral_codes WHERE email = ? LIMIT 1",
+            (payload["email"],),
+        )
+        row = cur.fetchone()
+        code = row[0] if row else None
+
+        deposits_count = 0
+        deposits_sum = 0.0
+        if code:
+            cur.execute(
+                """
+                SELECT COUNT(*), COALESCE(SUM(amount), 0)
+                FROM transactions
+                WHERE promo_code = ? AND type = 'yookassa'
+                """,
+                (code,),
+            )
+            stats = cur.fetchone()
+            deposits_count = int(stats[0] or 0)
+            deposits_sum = float(stats[1] or 0)
+
+    return {
+        "referral_code": code,
+        "deposits_count": deposits_count,
+        "deposits_sum": deposits_sum,
+    }
+
+
+@app.post("/referral/code")
+def create_referral_code(payload_req: ReferralCodeRequest, request: Request):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    code = normalize_referral_code(payload_req.code)
+    if not code:
+        return JSONResponse(
+            content={"status": "error", "message": "Промокод не может быть пустым"},
+            status_code=400,
+        )
+
+    with sq.connect("database.db") as con:
+        cur = con.cursor()
+        cur.execute("SELECT code FROM referral_codes WHERE email = ? LIMIT 1", (payload["email"],))
+        exists = cur.fetchone()
+        if exists:
+            return JSONResponse(
+                content={"status": "error", "message": "Авторский промокод можно создать только один раз"},
+                status_code=400,
+            )
+
+        cur.execute("SELECT 1 FROM referral_codes WHERE code = ? LIMIT 1", (code,))
+        occupied = cur.fetchone()
+        if occupied:
+            return JSONResponse(
+                content={"status": "error", "message": "Этот промокод уже занят"},
+                status_code=409,
+            )
+
+        cur.execute(
+            "INSERT INTO referral_codes (email, code, created_at) VALUES (?, ?, ?)",
+            (payload["email"], code, datetime.now().isoformat()),
+        )
+        con.commit()
+
+    return {"status": "success", "code": code}
 
 
 @app.post("/register")
