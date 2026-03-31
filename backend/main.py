@@ -39,7 +39,7 @@ if fallback_env_path.exists():
 Configuration.account_id = os.getenv('YOOKASSA_ACCOUNT_ID')
 Configuration.secret_key = os.getenv('YOOKASSA_SECRET_KEY')
 private_key = os.getenv("NEXT_API_SECRET")
-frontend_url = os.getenv("FRONTEND_URL", "https://coffeemaniavpn.ru")
+frontend_url = os.getenv("FRONTEND_URL")
 cors_origins = [
     "https://coffeemaniavpn.ru",
     "https://www.coffeemaniavpn.ru",
