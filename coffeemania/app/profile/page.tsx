@@ -571,10 +571,10 @@ export default function ProfilePage() {
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
       {/* TopNavBar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a]">
-        <nav className="flex justify-between items-center w-full px-8 py-4">
+        <nav className="flex justify-between items-center w-full px-4 md:px-8 py-3 md:py-4">
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
-            <div className="text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff]">
+            <div className="text-base sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
               <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span> ВПН
             </div>
           </div>
@@ -675,15 +675,15 @@ export default function ProfilePage() {
       </aside>
 
       {/* Main Canvas */}
-      <main className="md:ml-64 pt-24 pb-12 px-6 md:px-12 max-w-6xl mx-auto flex-1">
+      <main className="md:ml-64 pt-24 pb-12 px-4 md:px-12 max-w-6xl mx-auto flex-1">
         {/* Header Section */}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-4xl md:text-5xl font-serif font-bold text-primary tracking-tight">Ваши ключи</h1>
+            <h1 className="text-3xl md:text-5xl font-serif font-bold text-primary tracking-tight">Ваши ключи</h1>
             <p className="text-on-surface-variant max-w-md">Управляйте вашими персональными VLESS-ключами. Каждый ключ частично скрыт для максимальной безопасности.</p>
           </div>
           <button
-            className="bg-tertiary-fixed text-on-tertiary-fixed px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-sm"
+            className="w-full sm:w-auto bg-tertiary-fixed text-on-tertiary-fixed px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-sm"
             type="button"
             onClick={() => setIsAddKeyOpen(true)}
           >
@@ -736,9 +736,9 @@ export default function ProfilePage() {
                   return (
                     <div
                       key={k.id}
-                      className="bg-surface-container-lowest p-6 rounded-2xl flex items-center justify-between gap-4 hover:shadow-lg transition-all border border-transparent hover:border-outline-variant/20"
+                      className="bg-surface-container-lowest p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:shadow-lg transition-all border border-transparent hover:border-outline-variant/20"
                     >
-                      <div className="flex items-center gap-5 min-w-0">
+                      <div className="flex items-center gap-4 md:gap-5 min-w-0 w-full">
                         <div className="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0">
                           {k.country === "germany" || k.country === "france" || k.country === "austria" || k.country === "finland" ? (
                             <FlagBadge name={k.country as any} size="lg" />
@@ -759,7 +759,7 @@ export default function ProfilePage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-sm text-on-surface-variant font-mono truncate max-w-[46ch]">
+                          <p className="text-sm text-on-surface-variant font-mono truncate max-w-[30ch] sm:max-w-[46ch]">
                             {maskKey(k.vpn_key)}
                           </p>
                           <p className="text-xs text-on-surface-variant mt-1">
@@ -773,7 +773,7 @@ export default function ProfilePage() {
 
                       {!expired ? (
                         <button
-                          className="p-3 bg-secondary-container text-primary rounded-full hover:bg-tertiary-fixed transition-colors shrink-0"
+                          className="self-end sm:self-auto p-3 bg-secondary-container text-primary rounded-full hover:bg-tertiary-fixed transition-colors shrink-0"
                           type="button"
                           onClick={() => copyToClipboard(k.vpn_key)}
                           title="Скопировать"

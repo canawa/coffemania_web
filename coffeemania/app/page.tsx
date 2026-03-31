@@ -33,10 +33,10 @@ export default function Home() {
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-full">
       <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a] border-none shadow-none">
-        <div className="flex justify-between items-center w-full px-8 py-4 max-w-7xl mx-auto">
+        <div className="flex justify-between items-center gap-3 w-full px-4 md:px-8 py-3 md:py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-2">
             <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
-            <div className="text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff]">
+            <div className="text-base sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
               <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span> ВПН
             </div>
           </div>
@@ -64,7 +64,7 @@ export default function Home() {
             </Link>
           </div>
           <button
-            className="bg-primary text-on-primary px-6 py-2 rounded-full font-bold hover:scale-105 active:scale-95 transition-all"
+            className="bg-primary text-on-primary px-4 sm:px-6 py-2 rounded-full text-sm sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
             onClick={handleCabinetClick}
             disabled={isCheckingCabinet}
             type="button"
@@ -76,24 +76,24 @@ export default function Home() {
       </nav>
 
       <main>
-        <section className="relative overflow-hidden py-24 md:py-32 px-8">
-          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-16 items-center">
+        <section className="relative overflow-hidden py-14 md:py-32 px-4 md:px-8">
+          <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-10 md:gap-16 items-center">
             <div className="z-10">
-              <h1 className="font-headline text-5xl md:text-7xl font-extrabold text-primary leading-tight mb-6">
+              <h1 className="font-headline text-4xl sm:text-5xl md:text-7xl font-extrabold text-primary leading-tight mb-6">
                 VPN по цене чашки кофе
               </h1>
               <p className="text-on-surface-variant text-lg md:text-xl mb-10 max-w-md leading-relaxed">
                 Надежное VLESS-шифрование с авторской скоростью. Ключи для серверов по всему миру.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <a
-                  className="inline-flex items-center justify-center bg-gradient-to-br from-primary to-primary-container text-on-primary px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:shadow-primary/20 transition-all"
+                  className="inline-flex w-full sm:w-auto items-center justify-center bg-gradient-to-br from-primary to-primary-container text-on-primary px-8 py-4 rounded-full text-base sm:text-lg font-bold shadow-xl hover:shadow-primary/20 transition-all"
                   href="#prices"
                 >
                   Выбрать тариф
                 </a>
                 <Link
-                  className="inline-flex items-center justify-center border border-outline-variant/30 text-primary px-10 py-4 rounded-full text-lg font-semibold hover:bg-surface-container transition-all"
+                  className="inline-flex w-full sm:w-auto items-center justify-center border border-outline-variant/30 text-primary px-8 py-4 rounded-full text-base sm:text-lg font-semibold hover:bg-surface-container transition-all"
                   href="/guide"
                 >
                   Как это работает
@@ -124,10 +124,10 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="py-24 px-8 bg-surface-container">
+        <section className="py-16 md:py-24 px-4 md:px-8 bg-surface-container">
           <div className="max-w-7xl mx-auto">
             <div className="mb-16 text-center md:text-left">
-              <h2 className="font-headline text-4xl font-bold text-primary mb-4">
+              <h2 className="font-headline text-3xl md:text-4xl font-bold text-primary mb-4">
                 Вот причины по которым выбирают нас:
               </h2>
               <p className="text-on-surface-variant font-medium">
@@ -136,7 +136,7 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2 bg-surface-container-lowest p-10 rounded-xl shadow-sm border border-outline-variant/10 flex flex-col justify-between">
+              <div className="md:col-span-2 bg-surface-container-lowest p-6 md:p-10 rounded-xl shadow-sm border border-outline-variant/10 flex flex-col justify-between">
                 <div>
                   <span className="material-symbols-outlined text-tertiary-fixed-dim text-4xl mb-4">
                     security
@@ -158,7 +158,7 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="bg-primary text-on-primary p-10 rounded-xl flex flex-col justify-center">
+              <div className="bg-primary text-on-primary p-6 md:p-10 rounded-xl flex flex-col justify-center">
                 <span className="material-symbols-outlined text-tertiary-fixed text-4xl mb-4">
                   speed
                 </span>
@@ -170,7 +170,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="bg-tertiary-fixed p-10 rounded-xl">
+              <div className="bg-tertiary-fixed p-6 md:p-10 rounded-xl">
                 <span className="material-symbols-outlined text-on-tertiary-fixed text-4xl mb-4">
                   verified_user
                 </span>
@@ -182,7 +182,7 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="md:col-span-2 bg-surface-container-low p-10 rounded-xl overflow-hidden relative border border-outline-variant/10">
+              <div className="md:col-span-2 bg-surface-container-low p-6 md:p-10 rounded-xl overflow-hidden relative border border-outline-variant/10">
                 <div className="flex flex-col md:flex-row gap-8 items-center">
                   <div className="flex-1">
                     <h3 className="font-headline text-2xl font-bold mb-4">
@@ -205,10 +205,10 @@ export default function Home() {
 
 
 
-        <section className="py-24 px-8 bg-surface-container-low" id="prices">
+        <section className="py-16 md:py-24 px-4 md:px-8 bg-surface-container-low" id="prices">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
-              <h2 className="font-headline text-4xl font-bold text-primary mb-4">
+              <h2 className="font-headline text-3xl md:text-4xl font-bold text-primary mb-4">
                 Выберите свой тариф
               </h2>
               <p className="text-on-surface-variant max-w-xl mx-auto">
@@ -260,7 +260,7 @@ export default function Home() {
                 </Link>
               </div>
 
-              <div className="bg-primary text-on-primary p-8 rounded-xl shadow-2xl scale-105 z-10 flex flex-col relative overflow-hidden">
+              <div className="bg-primary text-on-primary p-8 rounded-xl shadow-2xl md:scale-105 z-10 flex flex-col relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-tertiary-fixed text-on-tertiary-fixed px-6 py-2 rounded-bl-xl font-bold text-xs uppercase tracking-widest">
                   Лучшее предложение
                 </div>
@@ -355,7 +355,7 @@ export default function Home() {
         </section>
 
 
-        <section className="py-24 px-8">
+        <section className="py-16 md:py-24 px-4 md:px-8">
           <div className="max-w-4xl mx-auto bg-primary rounded-xl overflow-hidden relative shadow-2xl">
             <div className="absolute inset-0 opacity-10">
               <Image
@@ -366,15 +366,15 @@ export default function Home() {
                 sizes="(min-width: 768px) 896px, 92vw"
               />
             </div>
-            <div className="relative z-10 p-12 text-center">
-              <h2 className="font-headline text-4xl font-bold text-on-primary mb-6">
+            <div className="relative z-10 p-7 md:p-12 text-center">
+              <h2 className="font-headline text-3xl md:text-4xl font-bold text-on-primary mb-6">
                 Готовы к лучшему соединению?
               </h2>
               <p className="text-on-primary-container text-lg mb-10">
                 Присоединяйтесь к 5,000+ пользователям, наслаждающимся самым
                 ароматным VPN-сервисом в мире.
               </p>
-              <Link href='/register' className="bg-tertiary-fixed text-on-tertiary-fixed px-12 py-5 rounded-full text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all">
+              <Link href='/register' className="inline-flex w-full sm:w-auto justify-center bg-tertiary-fixed text-on-tertiary-fixed px-8 md:px-12 py-4 md:py-5 rounded-full text-lg md:text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all">
                 Получить ключ сейчас
               </Link>
             </div>
@@ -383,7 +383,7 @@ export default function Home() {
       </main>
 
       <footer className="bg-[#fbf9f5] dark:bg-[#1b1c1a] border-t border-[#efeeea] dark:border-[#2a2a28]">
-        <div className="w-full py-12 px-8 flex flex-col items-center gap-6 max-w-7xl mx-auto">
+        <div className="w-full py-10 md:py-12 px-4 md:px-8 flex flex-col items-center gap-6 max-w-7xl mx-auto">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
             <a
               className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] transition-colors font-body text-sm uppercase tracking-widest"
