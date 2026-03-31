@@ -43,6 +43,7 @@ cors_origins = [
     "https://www.coffeemaniavpn.ru",
     "http://localhost:3002",
     "http://127.0.0.1:3002",
+    frontend_url,
 ]
 
 app = FastAPI()
