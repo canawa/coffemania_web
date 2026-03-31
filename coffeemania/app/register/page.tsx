@@ -120,8 +120,7 @@ export default function RegisterPage() {
               className="ml-auto sm:ml-0 shrink-0 bg-primary text-on-primary px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
               href="/register"
             >
-              <span className="sm:hidden">Рег.</span>
-              <span className="hidden sm:inline">Регистрация</span>
+              Регистрация
             </Link>
           </div>
         </div>

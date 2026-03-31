@@ -61,12 +61,7 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
           disabled={isCheckingCabinet}
           type="button"
         >
-          {isCheckingCabinet ? "Проверяем..." : (
-            <>
-              <span className="sm:hidden">Кабинет</span>
-              <span className="hidden sm:inline">Личный кабинет</span>
-            </>
-          )}
+          {isCheckingCabinet ? "Проверяем..." : "Личный кабинет"}
         </button>
       </div>
       <div className="bg-surface-container dark:bg-[#2a2a28] h-px w-full" />

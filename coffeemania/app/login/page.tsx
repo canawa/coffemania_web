@@ -118,8 +118,7 @@ export default function LoginPage() {
               className="ml-auto sm:ml-0 shrink-0 bg-primary text-on-primary px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
               href="/login"
             >
-              <span className="sm:hidden">Вход</span>
-              <span className="hidden sm:inline">Войти</span>
+              Войти
             </Link>
           </div>
         </div>
