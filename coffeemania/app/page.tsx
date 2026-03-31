@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [isCheckingCabinet, setIsCheckingCabinet] = useState(false);
@@ -13,7 +15,7 @@ export default function Home() {
     if (isCheckingCabinet) return;
     setIsCheckingCabinet(true);
     try {
-      const res = await fetch("http://localhost:8000/balance", {
+      const res = await fetch(`${API_BASE_URL}/balance`, {
         method: "GET",
         credentials: "include",
       });
@@ -53,13 +55,13 @@ export default function Home() {
             >
               Цены
             </a>
-            <a
+            <Link
               onClick={() => setActiveTab('instructions')}
               className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'instructions' ? 'text-[#271310] dark:text-[#ffba38] font-bold border-[#ffba38]' : 'text-[#504442] dark:text-[#efeeea] border-transparent hover:text-[#271310] dark:hover:text-[#ffba38]'}`}
-              href="#instructions"
+              href="/guide"
             >
               Инструкции
-            </a>
+            </Link>
           </div>
           <button
             className="bg-primary text-on-primary px-6 py-2 rounded-full font-bold hover:scale-105 active:scale-95 transition-all"
@@ -90,12 +92,12 @@ export default function Home() {
                 >
                   Выбрать тариф
                 </a>
-                <a
+                <Link
                   className="inline-flex items-center justify-center border border-outline-variant/30 text-primary px-10 py-4 rounded-full text-lg font-semibold hover:bg-surface-container transition-all"
-                  href="#instructions"
+                  href="/guide"
                 >
                   Как это работает
-                </a>
+                </Link>
               </div>
             </div>
 
@@ -385,7 +387,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
             <a
               className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] transition-colors font-body text-sm uppercase tracking-widest"
-              href="#"
+              href="/about"
             >
               О нас
             </a>
@@ -403,7 +405,7 @@ export default function Home() {
             </a>
             <a
               className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] transition-colors font-body text-sm uppercase tracking-widest"
-              href="#"
+              href="/support"
             >
               Поддержка
             </a>

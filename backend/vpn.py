@@ -1,13 +1,22 @@
 import os
 import secrets
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import aiohttp
 import dotenv
 from marzban import MarzbanAPI
 from marzban.models import UserCreate, ProxySettings
 
-dotenv.load_dotenv()
+app_env = os.getenv("APP_ENV", "local").lower()
+env_filename = ".env.production" if app_env == "production" else ".env.local"
+dotenv_path = Path(__file__).with_name(env_filename)
+fallback_dotenv_path = Path(__file__).with_name(".env")
+
+if dotenv_path.exists():
+    dotenv.load_dotenv(dotenv_path=dotenv_path)
+if fallback_dotenv_path.exists():
+    dotenv.load_dotenv(dotenv_path=fallback_dotenv_path)
 
 COUNTRIES = {
     "germany": {

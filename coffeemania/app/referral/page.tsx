@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 export default function ReferralPage() {
   const [promoCode, setPromoCode] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export default function ReferralPage() {
   const loadReferral = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/referral", {
+      const res = await fetch(`${API_BASE_URL}/referral`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -67,7 +69,7 @@ export default function ReferralPage() {
     if (!normalizedPromo || isCreated) return;
     setIsSaving(true);
     try {
-      const res = await fetch("http://localhost:8000/referral/code", {
+      const res = await fetch(`${API_BASE_URL}/referral/code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -132,7 +134,7 @@ export default function ReferralPage() {
             <span className="material-symbols-outlined">redeem</span>
             <span className="font-label">Реферальная программа</span>
           </a>
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="#">
+          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
             <span className="material-symbols-outlined">help</span>
             <span className="font-label">Помощь</span>
           </a>
@@ -224,10 +226,10 @@ export default function ReferralPage() {
 
       <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#2a2a28] bg-[#fbf9f5] dark:bg-[#1b1c1a] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">О нас</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">Поддержка</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
         </div>
         <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
       </footer>

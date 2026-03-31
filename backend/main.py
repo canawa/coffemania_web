@@ -25,17 +25,33 @@ class LoginRequest(BaseModel):
 
 
 create_tables()
-load_dotenv(dotenv_path=Path(__file__).with_name(".env"))
+
+app_env = os.getenv("APP_ENV", "local").lower()
+env_filename = ".env.production" if app_env == "production" else ".env.local"
+env_path = Path(__file__).with_name(env_filename)
+fallback_env_path = Path(__file__).with_name(".env")
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+if fallback_env_path.exists():
+    load_dotenv(dotenv_path=fallback_env_path)
 
 Configuration.account_id = os.getenv('YOOKASSA_ACCOUNT_ID')
 Configuration.secret_key = os.getenv('YOOKASSA_SECRET_KEY')
 private_key = os.getenv("NEXT_API_SECRET")
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3002")
+cors_origins_raw = os.getenv("CORS_ORIGINS")
+
+if cors_origins_raw:
+    cors_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
+else:
+    cors_origins = ["http://localhost:3002", "http://127.0.0.1:3002"]
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -193,7 +209,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
     },
     "confirmation": {
         "type": "redirect",
-        "return_url": "http://localhost:3000/profile"
+        "return_url": f"{frontend_url}/profile"
     },
     "capture": True,
     "description": "Пополнение баланса"

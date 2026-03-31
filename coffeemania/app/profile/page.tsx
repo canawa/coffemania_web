@@ -1,8 +1,13 @@
 "use client";
 import Link from "next/link";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
 export default function ProfilePage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [topUpAmount, setTopUpAmount] = useState('500'); // сумма пополнения
   const [balance, setBalance] = useState(0)
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
@@ -180,6 +185,12 @@ export default function ProfilePage() {
       };
     }, [enabled, onOutside, refs]);
   }
+
+  useClickOutside(
+    [mobileMenuRef, mobileMenuButtonRef],
+    () => setIsMobileMenuOpen(false),
+    isMobileMenuOpen,
+  );
 
   function Dropdown<T extends string>(props: {
     label: string;
@@ -396,7 +407,7 @@ export default function ProfilePage() {
   };
 
   const yookassaPayment = async (amount: number) => {
-    const res = await fetch("http://localhost:8000/create_payment", {
+    const res = await fetch(`${API_BASE_URL}/create_payment`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -415,7 +426,7 @@ export default function ProfilePage() {
     }
     window.open(data.confirmation.confirmation_url, "_blank");
     const interval = setInterval(async () => {
-      const result = await fetch(`http://localhost:8000/check_payment?payment_id=${data.id}`, {
+      const result = await fetch(`${API_BASE_URL}/check_payment?payment_id=${data.id}`, {
         method: "GET",
         credentials: "include",
       });
@@ -429,7 +440,7 @@ export default function ProfilePage() {
   }
 
   const getVpnKeys = async () => {
-    const res = await fetch("http://localhost:8000/vpn_keys", {
+    const res = await fetch(`${API_BASE_URL}/vpn_keys`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -491,7 +502,7 @@ export default function ProfilePage() {
     setBuyKeyMessage(null);
 
     try {
-      const res = await fetch("http://localhost:8000/buy_vpn", {
+      const res = await fetch(`${API_BASE_URL}/buy_vpn`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -530,7 +541,7 @@ export default function ProfilePage() {
   };
 
   const getBalance = async () => {
-    const res = await fetch("http://localhost:8000/balance", {
+    const res = await fetch(`${API_BASE_URL}/balance`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -579,14 +590,67 @@ export default function ProfilePage() {
                 <span className="material-symbols-outlined text-[18px]">add</span>
               </button>
             </div>
-            <a className="text-[#504442] dark:text-[#efeeea] hover:text-[#271310] dark:hover:text-[#ffba38] transition-colors duration-300" href="#">Инструкции</a>
+            <Link className="text-[#504442] dark:text-[#efeeea] hover:text-[#271310] dark:hover:text-[#ffba38] transition-colors duration-300" href="/guide">Инструкции</Link>
             <button onClick={handleLogout} className="bg-primary-container text-white hover:bg-error-container hover:text-white hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300">Выйти</button>
           </div>
-          <button className="md:hidden text-primary">
+          <button
+            className="md:hidden text-primary"
+            type="button"
+            onClick={() => setIsMobileMenuOpen((v) => !v)}
+            aria-label="Открыть меню"
+            ref={mobileMenuButtonRef}
+          >
             <span className="material-symbols-outlined">menu</span>
           </button>
         </nav>
         <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full"></div>
+        {isMobileMenuOpen ? (
+          <div
+            className="md:hidden absolute right-3 top-[calc(100%+8px)] z-[60]"
+            ref={mobileMenuRef}
+          >
+            <div className="w-[260px] max-w-[72vw] rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-3 flex flex-col gap-2 shadow-2xl">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsTopUpOpen(true);
+                  setIsMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-4 py-3 rounded-xl bg-tertiary-fixed text-on-tertiary-fixed font-bold"
+              >
+                Пополнить баланс
+              </button>
+              <Link
+                href="/guide"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
+              >
+                Инструкции
+              </Link>
+              <Link
+                href="/referral"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
+              >
+                Реферальная программа
+              </Link>
+              <Link
+                href="/help"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
+              >
+                Помощь
+              </Link>
+              <button
+                onClick={handleLogout}
+                type="button"
+                className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-white font-bold"
+              >
+                Выйти
+              </button>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       {/* SideNavBar (Hidden on small screens) */}
@@ -602,7 +666,7 @@ export default function ProfilePage() {
             <span className="font-label">Реферальная программа</span>
           </a>
 
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="#">
+          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
             <span className="material-symbols-outlined">help</span>
             <span className="font-label">Помощь</span>
           </a>
@@ -653,12 +717,12 @@ export default function ProfilePage() {
                     >
                       Добавить ключ
                     </button>
-                    <a
+                    <Link
                       className="px-8 py-3 rounded-full font-bold border border-outline-variant/40 text-primary hover:bg-surface-container transition-colors text-center"
-                      href="#"
+                      href="/guide"
                     >
                       Инструкции
-                    </a>
+                    </Link>
                   </div>
                   <div className="mt-2 w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-on-surface-variant">
                     Совет: сначала пополните баланс, затем выберите локацию и срок действия.
@@ -733,7 +797,7 @@ export default function ProfilePage() {
             <div className="bg-secondary-container p-6 rounded-xl space-y-4">
               <h4 className="font-bold text-primary flex items-center gap-2"><span className="material-symbols-outlined">auto_fix_high</span> Быстрая настройка</h4>
               <p className="text-sm text-on-secondary-container leading-relaxed">Скопируйте ключ VLESS и вставьте его в ваше приложение (Happ, Hiddify, V2RayNG, Amnezia).</p>
-              <a className="inline-flex items-center text-primary text-sm font-bold underline decoration-primary/30 hover:decoration-primary" href="#">Инструкция по установке <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span></a>
+              <Link className="inline-flex items-center text-primary text-sm font-bold underline decoration-primary/30 hover:decoration-primary" href="/guide">Инструкция по установке <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span></Link>
             </div>
 
             {/* Referral Banner */}
@@ -752,10 +816,10 @@ export default function ProfilePage() {
       {/* Footer */}
       <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#2a2a28] bg-[#fbf9f5] dark:bg-[#1b1c1a] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">О нас</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
           <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="#">Поддержка</a>
+          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
         </div>
         <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
       </footer>
@@ -890,7 +954,7 @@ export default function ProfilePage() {
                     <div className="text-xs text-on-surface-variant">
                       {pricing.durationDays
                         ? `Срок: ${pricing.durationDays} дней`
-                        : "Цена для этой длительности пока не настроена"}
+                        : "Пожизненно"}
                     </div>
                   </div>
                 </div>

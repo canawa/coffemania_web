@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
 type LoginFormValues = {
   email: string;
   password: string;
@@ -38,7 +40,7 @@ export default function LoginPage() {
     setSubmitState({ status: "loading" });
 
     try {
-      const res = await fetch("http://localhost:8000/login", {
+      const res = await fetch(`${API_BASE_URL}/login`, {
         method: "POST",
         credentials: "include",
         headers: {
