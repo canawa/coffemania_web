@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
   const [copyToast, setCopyToast] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
+  const [ownReferralCode, setOwnReferralCode] = useState<string | null>(null);
   const [vpnKeys, setVpnKeys] = useState<
     Array<{
       id: number;
@@ -407,6 +408,13 @@ export default function ProfilePage() {
   };
 
   const yookassaPayment = async (amount: number) => {
+    const normalizedPromo = promoCode.trim().toUpperCase();
+    if (normalizedPromo && ownReferralCode && normalizedPromo === ownReferralCode) {
+      setCopyToast("Нельзя использовать собственный реферальный промокод");
+      setTimeout(() => setCopyToast(null), 2200);
+      return;
+    }
+
     const res = await fetch(`${API_BASE_URL}/create_payment`, {
       method: "POST",
       headers: {
@@ -415,7 +423,7 @@ export default function ProfilePage() {
       credentials: "include",
       body: JSON.stringify({
         amount: amount,
-        promo_code: promoCode.trim() ? promoCode.trim().toUpperCase() : null,
+        promo_code: normalizedPromo ? normalizedPromo : null,
       }),
     });
     const data = await res.json();
@@ -564,6 +572,22 @@ export default function ProfilePage() {
       setVpnKeys(keys);
     };
     fetchKeys();
+
+    const fetchOwnReferral = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/referral`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { referral_code?: string | null };
+        const code = data?.referral_code?.trim().toUpperCase() ?? "";
+        setOwnReferralCode(code || null);
+      } catch {
+        setOwnReferralCode(null);
+      }
+    };
+    fetchOwnReferral();
   }, []);
 
 

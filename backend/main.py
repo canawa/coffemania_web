@@ -200,6 +200,11 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
                 content={"status": "error", "message": "Промокод не найден"},
                 status_code=400,
             )
+        if owner[0] == payload["email"]:
+            return JSONResponse(
+                content={"status": "error", "message": "Нельзя использовать собственный реферальный промокод"},
+                status_code=400,
+            )
 
     yoo_payment = Payment.create({
     "amount": {
@@ -267,6 +272,13 @@ def check_payment_yookassa_status(payment_id, email):
         )
         ctx = cur.fetchone()
         promo_code = ctx[0] if ctx else None
+
+        # Safety net: never count self-referral even if promo somehow passed client checks.
+        if promo_code:
+            cur.execute("SELECT email FROM referral_codes WHERE code = ? LIMIT 1", (promo_code,))
+            owner = cur.fetchone()
+            if owner and owner[0] == email:
+                promo_code = None
 
         try:
             cur.execute("""
@@ -368,9 +380,9 @@ def get_referral(request: Request):
                 """
                 SELECT COUNT(*), COALESCE(SUM(amount), 0)
                 FROM transactions
-                WHERE promo_code = ? AND type = 'yookassa'
+                WHERE promo_code = ? AND type = 'yookassa' AND email <> ?
                 """,
-                (code,),
+                (code, payload["email"]),
             )
             stats = cur.fetchone()
             deposits_count = int(stats[0] or 0)
