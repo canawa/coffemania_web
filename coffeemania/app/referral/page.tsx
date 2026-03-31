@@ -107,18 +107,20 @@ export default function ReferralPage() {
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a]">
-        <nav className="flex justify-between items-center w-full px-4 md:px-8 py-3 md:py-4">
-          <div className="flex items-center gap-2">
+        <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-3 md:px-8 py-2.5 md:py-4">
+          <div className="flex items-center gap-2 min-w-0">
             <img src="/logo.svg" alt="Логотип" className="w-8 h-8 object-contain" />
-            <div className="text-base sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span> ВПН
+            <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
+              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+              <span className="hidden sm:inline"> ВПН</span>
             </div>
           </div>
           <Link
             href="/profile"
-            className="bg-primary text-on-primary px-4 sm:px-6 py-2 rounded-full text-sm sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+            className="ml-auto sm:ml-0 shrink-0 bg-primary text-on-primary px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
           >
-            Назад в кабинет
+            <span className="sm:hidden">Кабинет</span>
+            <span className="hidden sm:inline">Назад в кабинет</span>
           </Link>
         </nav>
         <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full" />

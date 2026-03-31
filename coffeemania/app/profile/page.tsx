@@ -571,11 +571,12 @@ export default function ProfilePage() {
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
       {/* TopNavBar */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a]">
-        <nav className="flex justify-between items-center w-full px-4 md:px-8 py-3 md:py-4">
-          <div className="flex items-center gap-2">
+        <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-4 md:px-8 py-3 md:py-4">
+          <div className="flex items-center gap-2 min-w-0">
             <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
-            <div className="text-base sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span> ВПН
+            <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
+              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+              <span className="hidden sm:inline"> ВПН</span>
             </div>
           </div>
           <div className="hidden md:flex items-center gap-8">

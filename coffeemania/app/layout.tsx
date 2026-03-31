@@ -2,8 +2,59 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "КОФЕМАНИЯ ВПН",
-  description: "Премиум VPN для вашего утреннего кофе",
+  metadataBase: new URL("https://coffeemaniavpn.ru"),
+  title: {
+    default: "Coffee Mania VPN",
+    template: "%s | Coffee Mania VPN",
+  },
+  description:
+    "Быстрый и удобный VPN-сервис: регистрация, пополнение баланса, покупка ключей и подключение за пару минут.",
+  applicationName: "Coffee Mania VPN",
+  keywords: [
+    "VPN",
+    "Coffee Mania VPN",
+    "безопасный VPN",
+    "VLESS",
+    "vpn ключ",
+  ],
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://coffeemaniavpn.ru",
+    siteName: "Coffee Mania VPN",
+    title: "Coffee Mania VPN",
+    description:
+      "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
+    locale: "ru_RU",
+    images: [
+      {
+        url: "/logo.svg",
+        width: 512,
+        height: 512,
+        alt: "Coffee Mania VPN",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary",
+    title: "Coffee Mania VPN",
+    description:
+      "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
+    images: ["/logo.svg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
   icons: {
     icon: "/logo.svg",
     shortcut: "/logo.svg",
