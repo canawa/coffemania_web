@@ -40,12 +40,12 @@ Configuration.account_id = os.getenv('YOOKASSA_ACCOUNT_ID')
 Configuration.secret_key = os.getenv('YOOKASSA_SECRET_KEY')
 private_key = os.getenv("NEXT_API_SECRET")
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3002")
-cors_origins_raw = os.getenv("CORS_ORIGINS")
-
-if cors_origins_raw:
-    cors_origins = [origin.strip() for origin in cors_origins_raw.split(",") if origin.strip()]
-else:
-    cors_origins = ["http://localhost:3002", "http://127.0.0.1:3002"]
+cors_origins = [
+    "https://coffeemaniavpn.ru",
+    "https://www.coffeemaniavpn.ru",
+    "http://localhost:3002",
+    "http://127.0.0.1:3002",
+]
 
 app = FastAPI()
 
@@ -65,7 +65,7 @@ def read_root():
     return {"message": "Hello, World!"}
 
 
-def normalize_referral_code(value: str | None) -> str | None:
+def normalize_referral_code(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
     code = value.strip()

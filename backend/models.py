@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class User(BaseModel):
     email: str
@@ -7,7 +8,7 @@ class User(BaseModel):
 
 class PaymentRequest(BaseModel):
     amount: int
-    promo_code: str | None = None
+    promo_code: Optional[str] = None
 
 class VpnConfiguration(BaseModel):
     duration: int

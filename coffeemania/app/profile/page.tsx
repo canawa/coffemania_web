@@ -2,7 +2,7 @@
 import Link from "next/link";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE_URL = "https://api.coffeemaniavpn.ru";
 export default function ProfilePage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

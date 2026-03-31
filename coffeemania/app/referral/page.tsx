@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE_URL = "https://api.coffeemaniavpn.ru";
 
 export default function ReferralPage() {
   const [promoCode, setPromoCode] = useState("");

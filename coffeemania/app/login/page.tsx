@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+const API_BASE_URL = "https://api.coffeemaniavpn.ru";
 
 type LoginFormValues = {
   email: string;
