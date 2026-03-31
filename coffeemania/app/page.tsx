@@ -317,7 +317,7 @@ export default function Home() {
                     Стандартный
                   </h3>
                   <p className="text-on-surface-variant text-sm uppercase tracking-widest font-bold mt-1">
-                    3 МЕСЯЦА
+                    6 МЕСЯЦЕВ
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
