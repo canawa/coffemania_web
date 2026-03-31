@@ -1,6 +1,8 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
   /* Coffee Mania VPN palette (light) */
   --background: #fbf9f5;
   --foreground: #1b1c1a;
@@ -110,20 +112,6 @@
   --font-body: var(--font-body);
   --font-headline: var(--font-headline);
   --font-label: var(--font-body);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1b1c1a;
-    --foreground: #f2f0ed;
-    --surface: #1b1c1a;
-    --on-surface: #f2f0ed;
-    --on-surface-variant: #efeeea;
-    --surface-container: #2a2a28;
-    --surface-container-low: #222321;
-    --surface-container-lowest: #1b1c1a;
-    --outline-variant: #3a3a38;
-  }
 }
 
 body {
