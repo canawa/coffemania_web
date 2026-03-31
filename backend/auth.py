@@ -5,9 +5,7 @@ from pathlib import Path
 import jwt
 from dotenv import load_dotenv
 
-app_env = os.getenv("APP_ENV", "local").lower()
-env_filename = ".env.production" if app_env == "production" else ".env.local"
-dotenv_path = Path(__file__).with_name(env_filename)
+dotenv_path = Path(__file__).with_name(".env.production")
 fallback_dotenv_path = Path(__file__).with_name(".env")
 
 if dotenv_path.exists():
@@ -19,7 +17,7 @@ private_key = os.getenv("NEXT_API_SECRET")
 
 if not private_key:
     raise RuntimeError(
-        "Missing NEXT_API_SECRET. Set it in backend/.env.local/.env.production or environment variables."
+        "Missing NEXT_API_SECRET. Set it in backend/.env.production or environment variables."
     )
 def create_jwt(email: str, role: str, keys: dict):
     header = {

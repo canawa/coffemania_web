@@ -26,9 +26,7 @@ class LoginRequest(BaseModel):
 
 create_tables()
 
-app_env = os.getenv("APP_ENV", "local").lower()
-env_filename = ".env.production" if app_env == "production" else ".env.local"
-env_path = Path(__file__).with_name(env_filename)
+env_path = Path(__file__).with_name(".env.production")
 fallback_env_path = Path(__file__).with_name(".env")
 
 if env_path.exists():
