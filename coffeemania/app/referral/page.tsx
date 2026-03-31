@@ -212,7 +212,7 @@ export default function ReferralPage() {
           </button>
 
           <div className="rounded-xl bg-secondary-container px-4 py-3 text-sm text-on-secondary-container">
-            Для вывода средств на карту или в криптовалюте обратитесь в Telegram: <br /> Минимальная сумма вывода - <span className="font-bold text-primary">300 рублей</span>.
+            Для вывода средств на карту или в криптовалюте обратитесь в Telegram: <br /> Минимальная сумма вывода - <span className="font-bold text-primary">300₽</span>.
             <span className="font-bold text-primary">@CoffemaniaSupport</span>.
           </div>
 
