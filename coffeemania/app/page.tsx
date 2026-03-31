@@ -247,7 +247,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-primary text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии
+                    Узлы в Германии, Австрии, Финляндии и Франции, Австрии, Финляндии и Франции
                   </li>
                   <li className="flex items-center gap-3 text-on-surface-variant">
                     <span className="material-symbols-outlined text-primary text-xl">
@@ -294,7 +294,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-tertiary-fixed text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии
+                    Узлы в Германии, Австрии, Финляндии и Франции, Австрии, Финляндии и Франции
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-tertiary-fixed text-xl">
@@ -337,7 +337,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-primary text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии
+                    Узлы в Германии, Австрии, Финляндии и Франции
                   </li>
                   <li className="flex items-center gap-3 text-on-surface-variant">
                     <span className="material-symbols-outlined text-primary text-xl">
