@@ -104,9 +104,9 @@ export default function Home() {
 
             <div className="relative">
               <div className="absolute -top-20 -right-20 w-96 h-96 bg-tertiary-fixed opacity-20 blur-3xl rounded-full" />
-               <div className="hover:rotate-0 transition-transform duration-700 bg-surface-container-low"> 
+               <div className="hover:rotate-0 transition-transform duration-700">
                  <Image
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   alt="Минималистичная кофейная чашка и смартфон"
                   src = '/logo.svg'
                   // src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUIQTKuA1EUKqaeIOYdgK0QZEsqTd8sYvJD-GqF7D0ejgW-fiHnKpcmOUjRaPMhRq6TpSrVQZ35P2J7AiY_GUerZvf65upfJdYWL8wjg4WSazkFRsp9as4gj0lcLnoxwFVgVOfenBiiHthSjUmM3dJmgEm-k_gIbyuN5u03nrACA8GOqpTUTml5Fl9WV2tDURnBaYSAajO8GtnoAafNJ6YVI_b90Cqq47CtZzTDLyrVzFsZDlWU8cv3q0kCQuGZuIu0th7gFnkFig"
@@ -114,7 +114,6 @@ export default function Home() {
                   sizes="(min-width: 768px) 520px, 90vw"
                   priority
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent" />
               </div> 
 
               <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-surface-container-highest rounded-full p-4 shadow-lg border-4 border-surface hidden md:flex items-center justify-center">
