@@ -9,7 +9,10 @@ def create_tables():
             email TEXT NOT NULL UNIQUE,
             password TEXT NOT NULL,
             balance REAL NOT NULL DEFAULT 0 ,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            promo_code TEXT,
+            withdrawed REAL NOT NULL DEFAULT 0,
+            withdraw_available REAL NOT NULL DEFAULT 0
         )
         """)
         con.commit()
@@ -53,6 +56,16 @@ def create_tables():
             created_at TEXT NOT NULL
         )
         """)
+
+        # Backward-compatible migration for existing DBs.
+        cursor.execute("PRAGMA table_info(users)")
+        user_cols = {row[1] for row in cursor.fetchall()}
+        if "promo_code" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN promo_code TEXT")
+        if "withdrawed" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN withdrawed REAL NOT NULL DEFAULT 0")
+        if "withdraw_available" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN withdraw_available REAL NOT NULL DEFAULT 0")
 
         # Backward-compatible migration for existing DBs.
         cursor.execute("PRAGMA table_info(transactions)")

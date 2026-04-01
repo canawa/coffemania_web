@@ -12,6 +12,8 @@ export default function ReferralPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [depositsCount, setDepositsCount] = useState(0);
   const [depositsSum, setDepositsSum] = useState(0);
+  const [revShareTotal, setRevShareTotal] = useState(0);
+  const [withdrawAvailable, setWithdrawAvailable] = useState(0);
   const [isCreated, setIsCreated] = useState(false);
 
   const normalizedPromo = useMemo(
@@ -50,6 +52,8 @@ export default function ReferralPage() {
         referral_code?: string | null;
         deposits_count?: number;
         deposits_sum?: number;
+        revshare_total?: number;
+        withdraw_available?: number;
       };
 
       const code = data.referral_code ?? "";
@@ -57,6 +61,8 @@ export default function ReferralPage() {
       setIsCreated(Boolean(code));
       setDepositsCount(Number(data.deposits_count ?? 0));
       setDepositsSum(Number(data.deposits_sum ?? 0));
+      setRevShareTotal(Number(data.revshare_total ?? 0));
+      setWithdrawAvailable(Number(data.withdraw_available ?? 0));
     } catch {
       setMessage("Не удалось загрузить данные реферальной программы.");
       setTimeout(() => setMessage(null), 1800);
@@ -199,7 +205,11 @@ export default function ReferralPage() {
             </div>
             <div className="flex items-center justify-between">
               <span>RevShare (50%)</span>
-              <span className="font-bold text-primary">{(depositsSum * 0.5).toFixed(2)} ₽</span>
+              <span className="font-bold text-primary">{revShareTotal.toFixed(2)} ₽</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Доступно к выводу</span>
+              <span className="font-bold text-primary">{withdrawAvailable.toFixed(2)} ₽</span>
             </div>
           </div>
 

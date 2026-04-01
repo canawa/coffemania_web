@@ -367,14 +367,25 @@ def get_referral(request: Request):
     with sq.connect("database.db") as con:
         cur = con.cursor()
         cur.execute(
-            "SELECT code FROM referral_codes WHERE email = ? LIMIT 1",
+            "SELECT promo_code, withdrawed FROM users WHERE email = ? LIMIT 1",
             (payload["email"],),
         )
-        row = cur.fetchone()
-        code = row[0] if row else None
+        user_row = cur.fetchone()
+        code = user_row[0] if user_row and user_row[0] else None
+        withdrawed = float(user_row[1] or 0) if user_row else 0.0
+
+        if not code:
+            cur.execute(
+                "SELECT code FROM referral_codes WHERE email = ? LIMIT 1",
+                (payload["email"],),
+            )
+            row = cur.fetchone()
+            code = row[0] if row else None
 
         deposits_count = 0
         deposits_sum = 0.0
+        revshare_total = 0.0
+        withdraw_available = 0.0
         if code:
             cur.execute(
                 """
@@ -387,11 +398,26 @@ def get_referral(request: Request):
             stats = cur.fetchone()
             deposits_count = int(stats[0] or 0)
             deposits_sum = float(stats[1] or 0)
+            revshare_total = deposits_sum * 0.5
+            withdraw_available = max(revshare_total - withdrawed, 0.0)
+
+            cur.execute(
+                """
+                UPDATE users
+                SET withdraw_available = ?
+                WHERE email = ?
+                """,
+                (withdraw_available, payload["email"]),
+            )
+            con.commit()
 
     return {
         "referral_code": code,
         "deposits_count": deposits_count,
         "deposits_sum": deposits_sum,
+        "revshare_total": revshare_total,
+        "withdrawed": withdrawed,
+        "withdraw_available": withdraw_available,
     }
 
 
@@ -433,6 +459,10 @@ def create_referral_code(payload_req: ReferralCodeRequest, request: Request):
         cur.execute(
             "INSERT INTO referral_codes (email, code, created_at) VALUES (?, ?, ?)",
             (payload["email"], code, datetime.now().isoformat()),
+        )
+        cur.execute(
+            "UPDATE users SET promo_code = ? WHERE email = ?",
+            (code, payload["email"]),
         )
         con.commit()
 
