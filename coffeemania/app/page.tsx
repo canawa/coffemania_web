@@ -116,11 +116,6 @@ export default function Home() {
                 />
               </div> 
 
-              <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-surface-container-highest rounded-full p-4 shadow-lg border-4 border-surface hidden md:flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-6xl">
-                  coffee
-                </span>
-              </div>
             </div>
           </div>
         </section>
