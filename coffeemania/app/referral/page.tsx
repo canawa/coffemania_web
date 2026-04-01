@@ -174,7 +174,7 @@ export default function ReferralPage() {
             />
             {isCreated ? (
               <p className="text-xs text-on-surface-variant mt-2">
-                Авторский промокод уже создан и не может быть изменен.
+                Распространяйте свой промокод и зарабатывайте!
               </p>
             ) : null}
           </div>
