@@ -13,6 +13,7 @@ export default function ReferralPage() {
   const [depositsCount, setDepositsCount] = useState(0);
   const [depositsSum, setDepositsSum] = useState(0);
   const [revShareTotal, setRevShareTotal] = useState(0);
+  const [withdrawed, setWithdrawed] = useState(0);
   const [withdrawAvailable, setWithdrawAvailable] = useState(0);
   const [isCreated, setIsCreated] = useState(false);
 
@@ -53,6 +54,7 @@ export default function ReferralPage() {
         deposits_count?: number;
         deposits_sum?: number;
         revshare_total?: number;
+        withdrawed?: number;
         withdraw_available?: number;
       };
 
@@ -62,6 +64,7 @@ export default function ReferralPage() {
       setDepositsCount(Number(data.deposits_count ?? 0));
       setDepositsSum(Number(data.deposits_sum ?? 0));
       setRevShareTotal(Number(data.revshare_total ?? 0));
+      setWithdrawed(Number(data.withdrawed ?? 0));
       setWithdrawAvailable(Number(data.withdraw_available ?? 0));
     } catch {
       setMessage("Не удалось загрузить данные реферальной программы.");
@@ -206,6 +209,10 @@ export default function ReferralPage() {
             <div className="flex items-center justify-between">
               <span>RevShare (50%)</span>
               <span className="font-bold text-primary">{revShareTotal.toFixed(2)} ₽</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>Выведено:</span>
+              <span className="font-bold text-primary">{withdrawed.toFixed(2)} ₽</span>
             </div>
             <div className="flex items-center justify-between">
               <span>Доступно к выводу</span>

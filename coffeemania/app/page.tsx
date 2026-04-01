@@ -102,7 +102,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="relative">
+            <div className="relative hidden md:block">
               <div className="absolute -top-20 -right-20 w-96 h-96 bg-tertiary-fixed opacity-20 blur-3xl rounded-full" />
                <div className="relative w-full max-w-[520px] mx-auto aspect-square rotate-[-3deg] hover:rotate-[5deg] transition-transform duration-500 ease-out">
                  <Image
@@ -179,21 +179,17 @@ export default function Home() {
               </div>
 
               <div className="md:col-span-2 bg-surface-container-low p-6 md:p-10 rounded-xl overflow-hidden relative border border-outline-variant/10">
-                <div className="flex flex-col md:flex-row gap-8 items-center">
-                  <div className="flex-1">
-                    <h3 className="font-headline text-2xl font-bold mb-4">
-                      Поддержка всегда на связи
-                    </h3>
-                    <p className="text-on-surface-variant">
-                      Мы предоставляем 24/7 техническую поддержку, которая понимает как VPN протоколы, так и важность хорошего утреннего кофе.
-                    </p>
-                  </div>
-                  <div className="w-32 h-32 flex-shrink-0 bg-white rounded-full flex items-center justify-center shadow-inner">
-                    <span className="material-symbols-outlined text-primary text-5xl">
-                      support_agent
-                    </span>
-                  </div>
+                <div className="flex items-start gap-4 mb-4">
+                  <span className="material-symbols-outlined text-primary text-4xl">
+                    support_agent
+                  </span>
+                  <h3 className="font-headline text-2xl font-bold">
+                    Поддержка всегда на связи
+                  </h3>
                 </div>
+                <p className="text-on-surface-variant">
+                  Мы предоставляем 24/7 техническую поддержку, которая понимает как VPN протоколы, так и важность хорошего утреннего кофе.
+                </p>
               </div>
             </div>
           </div>
