@@ -108,7 +108,8 @@ export default function Home() {
                 <Image
                   className="w-full h-full object-cover"
                   alt="Минималистичная кофейная чашка и смартфон"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUIQTKuA1EUKqaeIOYdgK0QZEsqTd8sYvJD-GqF7D0ejgW-fiHnKpcmOUjRaPMhRq6TpSrVQZ35P2J7AiY_GUerZvf65upfJdYWL8wjg4WSazkFRsp9as4gj0lcLnoxwFVgVOfenBiiHthSjUmM3dJmgEm-k_gIbyuN5u03nrACA8GOqpTUTml5Fl9WV2tDURnBaYSAajO8GtnoAafNJ6YVI_b90Cqq47CtZzTDLyrVzFsZDlWU8cv3q0kCQuGZuIu0th7gFnkFig"
+                  src = '/logo.svg'
+                  // src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUIQTKuA1EUKqaeIOYdgK0QZEsqTd8sYvJD-GqF7D0ejgW-fiHnKpcmOUjRaPMhRq6TpSrVQZ35P2J7AiY_GUerZvf65upfJdYWL8wjg4WSazkFRsp9as4gj0lcLnoxwFVgVOfenBiiHthSjUmM3dJmgEm-k_gIbyuN5u03nrACA8GOqpTUTml5Fl9WV2tDURnBaYSAajO8GtnoAafNJ6YVI_b90Cqq47CtZzTDLyrVzFsZDlWU8cv3q0kCQuGZuIu0th7gFnkFig"
                   fill
                   sizes="(min-width: 768px) 520px, 90vw"
                   priority
