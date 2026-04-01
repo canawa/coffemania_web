@@ -104,7 +104,7 @@ export default function Home() {
 
             <div className="relative">
               <div className="absolute -top-20 -right-20 w-96 h-96 bg-tertiary-fixed opacity-20 blur-3xl rounded-full" />
-               <div className="hover:rotate-0 transition-transform duration-700">
+               <div className="relative w-full max-w-[520px] mx-auto aspect-square hover:rotate-0 transition-transform duration-700">
                  <Image
                   className="w-full h-full object-contain"
                   alt="Минималистичная кофейная чашка и смартфон"
