@@ -23,11 +23,6 @@ class LoginRequest(BaseModel):
     password: str
 
 
-class AdminLoginRequest(BaseModel):
-    login: str
-    password: str
-
-
 
 create_tables()
 
@@ -43,8 +38,6 @@ Configuration.account_id = os.getenv('YOOKASSA_ACCOUNT_ID')
 Configuration.secret_key = os.getenv('YOOKASSA_SECRET_KEY')
 private_key = os.getenv("NEXT_API_SECRET")
 frontend_url = os.getenv("FRONTEND_URL")
-admin_login = os.getenv("ADMIN_LOGIN")
-admin_password = os.getenv("ADMIN_PASSWORD")
 cors_origins = [
     "https://coffeemaniavpn.ru",
     "https://www.coffeemaniavpn.ru",
@@ -79,14 +72,6 @@ def normalize_referral_code(value: Optional[str]) -> Optional[str]:
         return None
     return code
 
-
-def verify_admin_request(request: Request):
-    token = request.cookies.get("admin_token")
-    payload = verify_jwt(token)
-    if payload.get("status") == "error" or payload.get("role") != "admin":
-        return None
-    return payload
-
 @app.post("/login")
 def login(payload: LoginRequest):
     with sq.connect("database.db") as con:
@@ -109,78 +94,6 @@ def login(payload: LoginRequest):
         samesite="Lax",
     )
     return response
-
-
-@app.post("/admin/login")
-def admin_login_route(payload: AdminLoginRequest):
-    if not admin_login or not admin_password:
-        return JSONResponse(
-            content={"status": "error", "message": "ADMIN_LOGIN / ADMIN_PASSWORD не настроены"},
-            status_code=500,
-        )
-
-    if payload.login != admin_login or payload.password != admin_password:
-        return JSONResponse(
-            content={"status": "error", "message": "Неверный логин или пароль"},
-            status_code=401,
-        )
-
-    token = create_jwt("admin@local", "admin", {})
-    response = JSONResponse(content={"status": "success"})
-    response.set_cookie(
-        key="admin_token",
-        value=token,
-        httponly=True,
-        samesite="Lax",
-    )
-    return response
-
-
-@app.get("/admin/me")
-def admin_me(request: Request):
-    payload = verify_admin_request(request)
-    if not payload:
-        return JSONResponse(
-            content={"status": "error", "message": "Требуется авторизация админа"},
-            status_code=401,
-        )
-    return {"status": "success", "role": "admin"}
-
-
-@app.post("/admin/logout")
-def admin_logout(request: Request):
-    payload = verify_admin_request(request)
-    if not payload:
-        return JSONResponse(
-            content={"status": "error", "message": "Требуется авторизация админа"},
-            status_code=401,
-        )
-    response = JSONResponse(content={"status": "success"})
-    response.delete_cookie(key="admin_token")
-    return response
-
-
-@app.get("/admin/users")
-def admin_users(request: Request):
-    payload = verify_admin_request(request)
-    if not payload:
-        return JSONResponse(
-            content={"status": "error", "message": "Требуется авторизация админа"},
-            status_code=401,
-        )
-
-    with sq.connect("database.db") as con:
-        con.row_factory = sq.Row
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT email, balance, promo_code, withdrawed, withdraw_available, created_at
-            FROM users
-            ORDER BY id DESC
-            """
-        )
-        rows = cur.fetchall()
-    return [dict(row) for row in rows]
 
 
 @app.post('/buy_vpn')
