@@ -104,8 +104,8 @@ export default function Home() {
 
             <div className="relative">
               <div className="absolute -top-20 -right-20 w-96 h-96 bg-tertiary-fixed opacity-20 blur-3xl rounded-full" />
-              <div className="relative z-10 rounded-xl overflow-hidden aspect-square shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700 bg-surface-container-low">
-                <Image
+               <div className="hover:rotate-0 transition-transform duration-700 bg-surface-container-low"> 
+                 <Image
                   className="w-full h-full object-cover"
                   alt="Минималистичная кофейная чашка и смартфон"
                   src = '/logo.svg'
@@ -115,7 +115,7 @@ export default function Home() {
                   priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-primary/40 to-transparent" />
-              </div>
+              </div> 
 
               <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-surface-container-highest rounded-full p-4 shadow-lg border-4 border-surface hidden md:flex items-center justify-center">
                 <span className="material-symbols-outlined text-primary text-6xl">
