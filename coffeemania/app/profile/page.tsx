@@ -22,6 +22,7 @@ export default function ProfilePage() {
   const [copyToast, setCopyToast] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [ownReferralCode, setOwnReferralCode] = useState<string | null>(null);
+  const [promoBonusHint, setPromoBonusHint] = useState<"none" | "valid" | "own">("none");
   const [vpnKeys, setVpnKeys] = useState<
     Array<{
       id: number;
@@ -590,6 +591,37 @@ export default function ProfilePage() {
     fetchOwnReferral();
   }, []);
 
+  useEffect(() => {
+    if (!isTopUpOpen) {
+      setPromoBonusHint("none");
+      return;
+    }
+    const raw = promoCode.trim();
+    if (!raw) {
+      setPromoBonusHint("none");
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/promo/validate?code=${encodeURIComponent(raw)}`,
+          { credentials: "include" },
+        );
+        if (!res.ok) {
+          setPromoBonusHint("none");
+          return;
+        }
+        const data = (await res.json()) as { valid?: boolean; own_code?: boolean };
+        if (data.own_code) setPromoBonusHint("own");
+        else if (data.valid) setPromoBonusHint("valid");
+        else setPromoBonusHint("none");
+      } catch {
+        setPromoBonusHint("none");
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [promoCode, isTopUpOpen]);
+
 
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
@@ -898,6 +930,16 @@ export default function ProfilePage() {
                   placeholder="Введите промокод"
                   className="w-full bg-surface-container-high text-primary font-semibold rounded-xl px-4 py-4 outline-none border-2 border-transparent focus:border-tertiary-fixed transition-colors"
                 />
+                {promoBonusHint === "valid" ? (
+                  <p className="mt-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                    Промокод действует: +10% к зачислению на баланс
+                  </p>
+                ) : null}
+                {promoBonusHint === "own" ? (
+                  <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                    Собственный промокод не даёт бонус к пополнению
+                  </p>
+                ) : null}
               </div>
             </div>
             <div className="p-6 bg-surface-container-low border-t border-outline-variant/20">

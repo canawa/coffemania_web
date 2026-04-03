@@ -33,6 +33,17 @@ def create_jwt(email: str, role: str, keys: dict):
     token = jwt.encode(payload, private_key, algorithm="HS256", headers=header)
     return token
 
+
+def create_admin_jwt(username: str):
+    header = {"alg": "HS256", "typ": "JWT"}
+    payload = {
+        "email": username,
+        "role": "admin",
+        "keys": {},
+        "exp": datetime.now() + timedelta(hours=8),
+    }
+    return jwt.encode(payload, private_key, algorithm="HS256", headers=header)
+
 def verify_jwt(token):
     try:
         payload = jwt.decode(token, private_key, algorithms=["HS256"])

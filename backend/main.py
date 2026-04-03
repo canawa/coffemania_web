@@ -1,4 +1,5 @@
 import os
+import secrets
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -10,11 +11,17 @@ from uuid import uuid4
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3 as sq
 from database import create_tables
-from models import User, PaymentRequest, VpnConfiguration, ReferralCodeRequest
+from models import (
+    User,
+    PaymentRequest,
+    VpnConfiguration,
+    ReferralCodeRequest,
+    AdminLoginRequest,
+)
 import jwt
 from datetime import datetime, timedelta
 import time
-from auth import create_jwt, verify_jwt
+from auth import create_jwt, verify_jwt, create_admin_jwt
 from yookassa import Configuration, Payment # для работы с Юкассой
 from vpn import generate_vpn_key
 
@@ -64,6 +71,22 @@ def read_root():
     return {"message": "Hello, World!"}
 
 
+def _admin_credentials_configured() -> bool:
+    return bool(os.getenv("ADMIN_LOGIN")) and bool(os.getenv("ADMIN_PASSWORD"))
+
+
+def get_admin_payload(request: Request):
+    token = request.cookies.get("admin_token")
+    if not token:
+        return None
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return None
+    if payload.get("role") != "admin":
+        return None
+    return payload
+
+
 def normalize_referral_code(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -71,6 +94,36 @@ def normalize_referral_code(value: Optional[str]) -> Optional[str]:
     if not code:
         return None
     return code
+
+
+@app.get("/promo/validate")
+def validate_promo_for_topup(request: Request, code: str = ""):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    normalized = normalize_referral_code(code)
+    if not normalized:
+        return {"valid": False, "own_code": False}
+
+    with sq.connect("database.db") as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT email FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
+            (normalized,),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return {"valid": False, "own_code": False}
+    if row[0] == payload["email"]:
+        return {"valid": False, "own_code": True}
+    return {"valid": True, "own_code": False, "bonus_percent": 10}
+
 
 @app.post("/login")
 def login(payload: LoginRequest):
@@ -193,7 +246,10 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
     if promo_code:
         with sq.connect("database.db") as con:
             cur = con.cursor()
-            cur.execute("SELECT email FROM referral_codes WHERE code = ? LIMIT 1", (promo_code,))
+            cur.execute(
+                "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
+                (promo_code,),
+            )
             owner = cur.fetchone()
         if not owner:
             return JSONResponse(
@@ -205,6 +261,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
                 content={"status": "error", "message": "Нельзя использовать собственный реферальный промокод"},
                 status_code=400,
             )
+        promo_code = owner[1]
 
     yoo_payment = Payment.create({
     "amount": {
@@ -273,12 +330,21 @@ def check_payment_yookassa_status(payment_id, email):
         ctx = cur.fetchone()
         promo_code = ctx[0] if ctx else None
 
+        credit_multiplier = 1.0
         # Safety net: never count self-referral even if promo somehow passed client checks.
         if promo_code:
-            cur.execute("SELECT email FROM referral_codes WHERE code = ? LIMIT 1", (promo_code,))
+            cur.execute(
+                "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
+                (promo_code,),
+            )
             owner = cur.fetchone()
-            if owner and owner[0] == email:
+            if not owner or owner[0] == email:
                 promo_code = None
+            else:
+                promo_code = owner[1]
+                credit_multiplier = 1.1
+
+        credit_amount = round(amount * credit_multiplier, 2)
 
         try:
             cur.execute("""
@@ -299,7 +365,7 @@ def check_payment_yookassa_status(payment_id, email):
                 UPDATE users
                 SET balance = COALESCE(balance, 0) + ?
                 WHERE email = ?
-            """, (amount, email))
+            """, (credit_amount, email))
 
             cur.execute("DELETE FROM payment_contexts WHERE payment_id = ?", (payment_id,))
 
@@ -391,7 +457,7 @@ def get_referral(request: Request):
                 """
                 SELECT COUNT(*), COALESCE(SUM(amount), 0)
                 FROM transactions
-                WHERE promo_code = ? AND type = 'yookassa' AND email <> ?
+                WHERE UPPER(IFNULL(promo_code, '')) = UPPER(?) AND type = 'yookassa' AND email <> ?
                 """,
                 (code, payload["email"]),
             )
@@ -448,7 +514,10 @@ def create_referral_code(payload_req: ReferralCodeRequest, request: Request):
                 status_code=400,
             )
 
-        cur.execute("SELECT 1 FROM referral_codes WHERE code = ? LIMIT 1", (code,))
+        cur.execute(
+            "SELECT 1 FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
+            (code,),
+        )
         occupied = cur.fetchone()
         if occupied:
             return JSONResponse(
@@ -467,6 +536,70 @@ def create_referral_code(payload_req: ReferralCodeRequest, request: Request):
         con.commit()
 
     return {"status": "success", "code": code}
+
+
+@app.post("/admin/login")
+def admin_login(payload: AdminLoginRequest):
+    if not _admin_credentials_configured():
+        return JSONResponse(
+            content={"status": "error", "message": "Админка не настроена"},
+            status_code=503,
+        )
+    login_env = os.getenv("ADMIN_LOGIN", "")
+    password_env = os.getenv("ADMIN_PASSWORD", "")
+    if not (
+        secrets.compare_digest(payload.username, login_env)
+        and secrets.compare_digest(payload.password, password_env)
+    ):
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный логин или пароль"},
+            status_code=401,
+        )
+    token = create_admin_jwt(login_env)
+    response = JSONResponse(content={"status": "ok"})
+    response.set_cookie(
+        key="admin_token",
+        value=token,
+        httponly=True,
+        samesite="Lax",
+        path="/",
+    )
+    return response
+
+
+@app.post("/admin/logout")
+def admin_logout():
+    response = JSONResponse(content={"status": "ok"})
+    response.delete_cookie("admin_token", path="/")
+    return response
+
+
+@app.get("/admin/me")
+def admin_me(request: Request):
+    if get_admin_payload(request):
+        return {"status": "ok"}
+    return JSONResponse(content={"status": "error"}, status_code=401)
+
+
+@app.get("/admin/users")
+def admin_users(request: Request):
+    if not get_admin_payload(request):
+        return JSONResponse(
+            content={"status": "error", "message": "Нет доступа"},
+            status_code=401,
+        )
+    with sq.connect("database.db") as con:
+        con.row_factory = sq.Row
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT id, email, balance, created_at, promo_code, withdrawed, withdraw_available
+            FROM users
+            ORDER BY id DESC
+            """
+        )
+        rows = cur.fetchall()
+    return {"users": [dict(r) for r in rows]}
 
 
 @app.post("/register")

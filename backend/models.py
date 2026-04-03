@@ -16,3 +16,8 @@ class VpnConfiguration(BaseModel):
 
 class ReferralCodeRequest(BaseModel):
     code: str
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
