@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-
-const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 export default function ReferralPage() {
   const [promoCode, setPromoCode] = useState("");
@@ -37,13 +36,14 @@ export default function ReferralPage() {
   const loadReferral = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/referral`, {
+      const res = await apiFetch(`${API_BASE_URL}/referral`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
       });
+      if (res.status === 401) return;
       if (!res.ok) {
         setMessage(`Ошибка загрузки: ${res.status}`);
         setTimeout(() => setMessage(null), 1800);
@@ -78,7 +78,7 @@ export default function ReferralPage() {
     if (!normalizedPromo || isCreated) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/referral/code`, {
+      const res = await apiFetch(`${API_BASE_URL}/referral/code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -87,6 +87,7 @@ export default function ReferralPage() {
         body: JSON.stringify({ code: normalizedPromo }),
       });
       const contentType = res.headers.get("content-type") ?? "";
+      if (res.status === 401) return;
       if (!res.ok) {
         if (contentType.includes("application/json")) {
           const err = await res.json();

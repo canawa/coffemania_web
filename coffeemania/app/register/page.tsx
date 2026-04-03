@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-
-const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 type RegisterFormValues = {
   email: string;
@@ -37,7 +36,7 @@ export default function RegisterPage() {
     setSubmitState({ status: "loading" });
 
     try {
-      const res = await fetch(`${API_BASE_URL}/register`, {
+      const res = await apiFetch(`${API_BASE_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

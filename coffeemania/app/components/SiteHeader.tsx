@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 type HeaderTab = "home" | "prices" | "instructions";
 
@@ -15,10 +16,11 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
     if (isCheckingCabinet) return;
     setIsCheckingCabinet(true);
     try {
-      const res = await fetch("https://api.coffeemaniavpn.ru/balance", {
+      const res = await apiFetch(`${API_BASE_URL}/balance`, {
         method: "GET",
         credentials: "include",
       });
+      if (res.status === 401) return;
       router.push(res.ok ? "/profile" : "/register");
     } catch {
       router.push("/register");

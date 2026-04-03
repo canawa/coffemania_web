@@ -1,8 +1,7 @@
 "use client";
 import Link from "next/link";
 import React, { useEffect, useId, useMemo, useRef, useState } from "react";
-
-const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 export default function ProfilePage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -416,7 +415,7 @@ export default function ProfilePage() {
       return;
     }
 
-    const res = await fetch(`${API_BASE_URL}/create_payment`, {
+    const res = await apiFetch(`${API_BASE_URL}/create_payment`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -427,6 +426,7 @@ export default function ProfilePage() {
         promo_code: normalizedPromo ? normalizedPromo : null,
       }),
     });
+    if (res.status === 401) return;
     const data = await res.json();
     if (!res.ok) {
       setCopyToast(data?.message ?? `Ошибка ${res.status}`);
@@ -435,10 +435,14 @@ export default function ProfilePage() {
     }
     window.open(data.confirmation.confirmation_url, "_blank");
     const interval = setInterval(async () => {
-      const result = await fetch(`${API_BASE_URL}/check_payment?payment_id=${data.id}`, {
+      const result = await apiFetch(`${API_BASE_URL}/check_payment?payment_id=${data.id}`, {
         method: "GET",
         credentials: "include",
       });
+      if (result.status === 401) {
+        clearInterval(interval);
+        return;
+      }
       const result_data = await result.json();
       if (result_data === true) {
         clearInterval(interval);
@@ -449,13 +453,14 @@ export default function ProfilePage() {
   }
 
   const getVpnKeys = async () => {
-    const res = await fetch(`${API_BASE_URL}/vpn_keys`, {
+    const res = await apiFetch(`${API_BASE_URL}/vpn_keys`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
       credentials: "include",
     });
+    if (res.status === 401) return [];
     if (!res.ok) return [];
     const data = (await res.json()) as unknown;
     return Array.isArray(data) ? (data as typeof vpnKeys) : [];
@@ -511,7 +516,7 @@ export default function ProfilePage() {
     setBuyKeyMessage(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/buy_vpn`, {
+      const res = await apiFetch(`${API_BASE_URL}/buy_vpn`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -524,6 +529,7 @@ export default function ProfilePage() {
       });
 
       const contentType = res.headers.get("content-type") ?? "";
+      if (res.status === 401) return;
       if (!res.ok) {
         if (contentType.includes("application/json")) {
           const err = await res.json();
@@ -550,13 +556,14 @@ export default function ProfilePage() {
   };
 
   const getBalance = async () => {
-    const res = await fetch(`${API_BASE_URL}/balance`, {
+    const res = await apiFetch(`${API_BASE_URL}/balance`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
       },
       credentials: "include",
     });
+    if (res.status === 401) return 0;
     const data = await res.json();
     return data;
   };
@@ -576,10 +583,11 @@ export default function ProfilePage() {
 
     const fetchOwnReferral = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/referral`, {
+        const res = await apiFetch(`${API_BASE_URL}/referral`, {
           method: "GET",
           credentials: "include",
         });
+        if (res.status === 401) return;
         if (!res.ok) return;
         const data = (await res.json()) as { referral_code?: string | null };
         const code = data?.referral_code?.trim().toUpperCase() ?? "";
@@ -603,10 +611,11 @@ export default function ProfilePage() {
     }
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `${API_BASE_URL}/promo/validate?code=${encodeURIComponent(raw)}`,
           { credentials: "include" },
         );
+        if (res.status === 401) return;
         if (!res.ok) {
           setPromoBonusHint("none");
           return;

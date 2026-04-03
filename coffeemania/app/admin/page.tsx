@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-
-const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 type AdminUser = {
   id: number;
@@ -24,7 +23,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
 
   const loadUsers = useCallback(async () => {
-    const res = await fetch(`${API_BASE_URL}/admin/users`, {
+    const res = await apiFetch(`${API_BASE_URL}/admin/users`, {
       credentials: "include",
     });
     if (!res.ok) {
@@ -40,7 +39,7 @@ export default function AdminPage() {
     const check = async () => {
       setIsChecking(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/admin/me`, {
+        const res = await apiFetch(`${API_BASE_URL}/admin/me`, {
           credentials: "include",
         });
         if (res.ok) {
@@ -63,7 +62,7 @@ export default function AdminPage() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE_URL}/admin/login`, {
+      const res = await apiFetch(`${API_BASE_URL}/admin/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -91,7 +90,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await fetch(`${API_BASE_URL}/admin/logout`, {
+    await apiFetch(`${API_BASE_URL}/admin/logout`, {
       method: "POST",
       credentials: "include",
     });

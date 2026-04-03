@@ -3,8 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
@@ -15,10 +14,11 @@ export default function Home() {
     if (isCheckingCabinet) return;
     setIsCheckingCabinet(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/balance`, {
+      const res = await apiFetch(`${API_BASE_URL}/balance`, {
         method: "GET",
         credentials: "include",
       });
+      if (res.status === 401) return;
       if (res.ok) {
         router.push("/profile");
       } else {
