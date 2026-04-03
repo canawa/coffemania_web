@@ -4,18 +4,19 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://coffeemaniavpn.ru"),
   title: {
-    default: "Coffee Mania VPN",
-    template: "%s | Coffee Mania VPN",
+    default: "КОФЕМАНИЯ ВПН",
+    template: "%s | КОФЕМАНИЯ ВПН",
   },
   description:
     "Быстрый и удобный VPN-сервис: регистрация, пополнение баланса, покупка ключей и подключение за пару минут.",
-  applicationName: "Coffee Mania VPN",
+  applicationName: "КОФЕМАНИЯ ВПН",
   keywords: [
     "VPN",
-    "Coffee Mania VPN",
+    "КОФЕМАНИЯ ВПН",
     "безопасный VPN",
     "VLESS",
     "vpn ключ",
+    
   ],
   alternates: {
     canonical: "/",
@@ -23,8 +24,8 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://coffeemaniavpn.ru",
-    siteName: "Coffee Mania VPN",
-    title: "Coffee Mania VPN",
+    siteName: "КОФЕМАНИЯ ВПН",
+    title: "КОФЕМАНИЯ ВПН",
     description:
       "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
     locale: "ru_RU",
@@ -33,13 +34,13 @@ export const metadata: Metadata = {
         url: "/logo.svg",
         width: 512,
         height: 512,
-        alt: "Coffee Mania VPN",
+        alt: "КОФЕМАНИЯ ВПН",
       },
     ],
   },
   twitter: {
     card: "summary",
-    title: "Coffee Mania VPN",
+    title: "КОФЕМАНИЯ ВПН",
     description:
       "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
     images: ["/logo.svg"],

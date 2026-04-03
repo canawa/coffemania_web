@@ -2,10 +2,10 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Coffee Mania VPN",
-    short_name: "CoffeeVPN",
+    name: "КОФЕМАНИЯ ВПН",
+    short_name: "КОФЕМАНИЯ ВПН",
     description:
-      "Быстрый и удобный VPN-сервис с личным кабинетом, тарифами и ключами подключения.",
+      "Быстрый и удобный VPN-сервис: регистрация, пополнение баланса, покупка ключей и подключение за пару минут.",
     start_url: "/",
     display: "standalone",
     background_color: "#fbf9f5",
