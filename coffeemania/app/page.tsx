@@ -222,7 +222,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
-                  100₽{" "}
+                  150₽{" "}
                   <span className="text-lg font-medium text-on-surface-variant">
                     /мес
                   </span>

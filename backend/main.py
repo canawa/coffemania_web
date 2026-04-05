@@ -165,7 +165,7 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
 
     price_by_duration = {
         7: 50,
-        30: 100,
+        30: 150,
         180: 500,
         365: 800,
         0: 2900,
@@ -273,7 +273,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
         "return_url": f"{frontend_url}/profile"
     },
     "capture": True,
-    "description": "Пополнение баланса"
+    "description": "Пополнение баланса coffeemaniavpn.ru"
         }, str(uuid4()))
 
     with sq.connect("database.db") as con:

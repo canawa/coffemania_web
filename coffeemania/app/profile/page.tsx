@@ -44,7 +44,7 @@ export default function ProfilePage() {
 
     const priceByDurationDays: Record<number, number> = {
       7: 50,
-      30: 100,
+      30: 150,
       180: 500,
       365: 800,
       0: 2900,
@@ -904,7 +904,7 @@ export default function ProfilePage() {
               <div>
                 <label className="block text-sm font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Выберите сумму</label>
                 <div className="grid grid-cols-3 gap-3">
-                  {['100', '500', '1000'].map(amount => (
+                  {['150', '500', '1000'].map(amount => (
                     <button
                       key={amount}
                       onClick={() => setTopUpAmount(amount)}
