@@ -268,7 +268,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold mb-8">
-                  150₽{" "}
+                  1400₽{" "}
                   <span className="text-lg font-medium opacity-60">
                     /год
                   </span>
@@ -312,7 +312,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
-                  150₽{" "}
+                  600₽{" "}
                   <span className="text-lg font-medium text-on-surface-variant">
                     /полгода
                   </span>

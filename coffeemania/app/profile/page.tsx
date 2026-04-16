@@ -43,11 +43,11 @@ export default function ProfilePage() {
     };
 
     const priceByDurationDays: Record<number, number> = {
-      7: 150,
+      7: 50,
       30: 150,
-      180: 150,
-      365: 150,
-      0: 150,
+      180: 600,
+      365: 1400,
+      0: 2900,
     };
 
     const durationDays = durationDaysByUi[selectedDuration];
