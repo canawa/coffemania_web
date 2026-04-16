@@ -11,8 +11,8 @@ export default function ProfilePage() {
   const [balance, setBalance] = useState(0)
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
   const [selectedCountry, setSelectedCountry] = useState<
-    "germany" | "france" | "austria" | "finland"
-  >("germany");
+    "germany1" | "germany2" | "austria" | "lte_bypass"
+  >("germany1");
   const [selectedDuration, setSelectedDuration] = useState<
     "week" | "month" | "half_year" | "year" | "lifetime"
   >("month");
@@ -43,11 +43,11 @@ export default function ProfilePage() {
     };
 
     const priceByDurationDays: Record<number, number> = {
-      7: 50,
+      7: 150,
       30: 150,
-      180: 500,
-      365: 800,
-      0: 2900,
+      180: 150,
+      365: 150,
+      0: 150,
     };
 
     const durationDays = durationDaysByUi[selectedDuration];
@@ -59,10 +59,10 @@ export default function ProfilePage() {
   const countryOptions = useMemo(
     () =>
       [
-        { value: "germany" as const, label: "Германия", flag: "germany" as const },
-        { value: "france" as const, label: "Франция", flag: "france" as const },
+        { value: "germany1" as const, label: "Германия 1", flag: "germany" as const },
+        { value: "germany2" as const, label: "Германия 2", flag: "germany" as const },
         { value: "austria" as const, label: "Австрия", flag: "austria" as const },
-        { value: "finland" as const, label: "Финляндия", flag: "finland" as const },
+        { value: "lte_bypass" as const, label: "ОБХОД LTE", flag: "russia" as const },
       ] as const,
     [],
   );
@@ -79,7 +79,7 @@ export default function ProfilePage() {
     [],
   );
 
-  const FlagSvg = ({ name }: { name: "germany" | "france" | "austria" | "finland" }) => {
+  const FlagSvg = ({ name }: { name: "germany" | "austria" | "russia" }) => {
     const common = {
       width: 22,
       height: 16,
@@ -108,19 +108,6 @@ export default function ProfilePage() {
       );
     }
 
-    if (name === "france") {
-      return (
-        <svg {...common} aria-hidden="true" focusable="false">
-          <Clip />
-          <g clipPath={`url(#flag-clip-${name})`}>
-            <rect width="22" height="16" fill="#FFFFFF" />
-            <rect width="7.333" height="16" fill="#0055A4" />
-            <rect x="14.666" width="7.334" height="16" fill="#EF4135" />
-          </g>
-        </svg>
-      );
-    }
-
     if (name === "austria") {
       return (
         <svg {...common} aria-hidden="true" focusable="false">
@@ -138,14 +125,20 @@ export default function ProfilePage() {
         <Clip />
         <g clipPath={`url(#flag-clip-${name})`}>
           <rect width="22" height="16" fill="#FFFFFF" />
-          <rect x="6" width="4" height="16" fill="#003580" />
-          <rect y="6" width="22" height="4" fill="#003580" />
+          <rect y="5.333" width="22" height="5.333" fill="#0039A6" />
+          <rect y="10.666" width="22" height="5.334" fill="#D52B1E" />
         </g>
       </svg>
     );
   };
 
-  const FlagBadge = ({ name, size }: { name: "germany" | "france" | "austria" | "finland"; size?: "sm" | "lg" }) => {
+  const FlagBadge = ({
+    name,
+    size,
+  }: {
+    name: "germany" | "austria" | "russia";
+    size?: "sm" | "lg";
+  }) => {
     const cls =
       size === "lg"
         ? "w-[28px] h-[20px] rounded-[6px]"
@@ -806,8 +799,12 @@ export default function ProfilePage() {
                     >
                       <div className="flex items-center gap-4 md:gap-5 min-w-0 w-full">
                         <div className="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0">
-                          {k.country === "germany" || k.country === "france" || k.country === "austria" || k.country === "finland" ? (
-                            <FlagBadge name={k.country as any} size="lg" />
+                          {k.country === "germany1" || k.country === "germany2" ? (
+                            <FlagBadge name="germany" size="lg" />
+                          ) : k.country === "austria" ? (
+                            <FlagBadge name="austria" size="lg" />
+                          ) : k.country === "lte_bypass" ? (
+                            <FlagBadge name="russia" size="lg" />
                           ) : (
                             <span className="material-symbols-outlined text-primary">public</span>
                           )}

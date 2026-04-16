@@ -163,12 +163,19 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         cursor.execute("SELECT balance FROM users WHERE email = ? LIMIT 1", (payload['email'],))
         balance = cursor.fetchone()
 
+    allowed_countries = {"germany1", "germany2", "austria", "lte_bypass"}
+    if configuration.country not in allowed_countries:
+        return JSONResponse(
+            content={"status": "error", "message": "Недоступная локация"},
+            status_code=400,
+        )
+
     price_by_duration = {
-        7: 50,
+        7: 150,
         30: 150,
-        180: 500,
-        365: 800,
-        0: 2900,
+        180: 150,
+        365: 150,
+        0: 150,
     }
 
     required = price_by_duration.get(configuration.duration) # дернуть по значению справа от ключа в dictionary

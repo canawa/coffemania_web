@@ -238,7 +238,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-primary text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии, Австрии, Финляндии и Франции
+                    Узлы в Германии 1, Германии 2, Австрии и ОБХОД LTE
                   </li>
                   <li className="flex items-center gap-3 text-on-surface-variant">
                     <span className="material-symbols-outlined text-primary text-xl">
@@ -268,7 +268,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold mb-8">
-                  800₽{" "}
+                  150₽{" "}
                   <span className="text-lg font-medium opacity-60">
                     /год
                   </span>
@@ -285,7 +285,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-tertiary-fixed text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии, Австрии, Финляндии и Франции
+                    Узлы в Германии 1, Германии 2, Австрии и ОБХОД LTE
                   </li>
                   <li className="flex items-center gap-3">
                     <span className="material-symbols-outlined text-tertiary-fixed text-xl">
@@ -312,7 +312,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
-                  500₽{" "}
+                  150₽{" "}
                   <span className="text-lg font-medium text-on-surface-variant">
                     /полгода
                   </span>
@@ -328,7 +328,7 @@ export default function Home() {
                     <span className="material-symbols-outlined text-primary text-xl">
                       check
                     </span>{" "}
-                    Узлы в Германии, Австрии, Финляндии и Франции
+                    Узлы в Германии 1, Германии 2, Австрии и ОБХОД LTE
                   </li>
                   <li className="flex items-center gap-3 text-on-surface-variant">
                     <span className="material-symbols-outlined text-primary text-xl">

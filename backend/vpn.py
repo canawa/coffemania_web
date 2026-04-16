@@ -16,26 +16,35 @@ if dotenv_path.exists():
 if fallback_dotenv_path.exists():
     dotenv.load_dotenv(dotenv_path=fallback_dotenv_path)
 
+
+def _env_first(*keys: str):
+    for key in keys:
+        value = os.getenv(key)
+        if value:
+            return value.strip()
+    return None
+
+
 COUNTRIES = {
-    "germany": {
-        "url": os.getenv("MARZABAN_URL_GERMANY"),
-        "username": os.getenv("MARZABAN_USERNAME_GERMANY"),
-        "password": os.getenv("MARZABAN_PASSWORD_GERMANY"),
+    "germany1": {
+        "url": _env_first("MARZABAN_URL_GERMANY1", "MARZABAN_URL_GERMANY"),
+        "username": _env_first("MARZABAN_USERNAME_GERMANY1", "MARZABAN_USERNAME_GERMANY"),
+        "password": _env_first("MARZABAN_PASSWORD_GERMANY1", "MARZABAN_PASSWORD_GERMANY"),
     },
-    "finland": {
-        "url": os.getenv("MARZABAN_URL_FINLAND"),
-        "username": os.getenv("MARZABAN_USERNAME_FINLAND"),
-        "password": os.getenv("MARZABAN_PASSWORD_FINLAND"),
+    "germany2": {
+        "url": _env_first("MARZABAN_URL_GERMANY2", "MARZABAN_URL_GERMANY_WHITELIST"),
+        "username": _env_first("MARZABAN_USERNAME_GERMANY2", "MARZABAN_USERNAME_GERMANY_WHITELIST"),
+        "password": _env_first("MARZABAN_PASSWORD_GERMANY2", "MARZABAN_PASSWORD_GERMANY_WHITELIST"),
     },
     "austria": {
-        "url": os.getenv("MARZABAN_URL_AUSTRIA"),
-        "username": os.getenv("MARZABAN_USERNAME_AUSTRIA"),
-        "password": os.getenv("MARZABAN_PASSWORD_AUSTRIA"),
+        "url": _env_first("MARZABAN_URL_AUSTRIA"),
+        "username": _env_first("MARZABAN_USERNAME_AUSTRIA"),
+        "password": _env_first("MARZABAN_PASSWORD_AUSTRIA"),
     },
-    "france": {
-        "url": os.getenv("MARZABAN_URL_FRANCE"),
-        "username": os.getenv("MARZABAN_USERNAME_FRANCE"),
-        "password": os.getenv("MARZABAN_PASSWORD_FRANCE"),
+    "lte_bypass": {
+        "url": _env_first("MARZABAN_URL_WHITELIST"),
+        "username": _env_first("MARZABAN_USERNAME_WHITELIST"),
+        "password": _env_first("MARZABAN_PASSWORD_WHITELIST"),
     },
 }
 
