@@ -185,6 +185,11 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
             content={"status": "error", "message": "Не удалось создать VPN ключ"},
             status_code=500,
         )
+    if generated.get("error"):
+        return JSONResponse(
+            content={"status": "error", "message": generated.get("error")},
+            status_code=500,
+        )
     key = generated.get("subscription_url")
     vpn_username = generated.get("username")
     if not key:
@@ -322,6 +327,11 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
         if not renewed:
             return JSONResponse(
                 content={"status": "error", "message": "Не удалось продлить подписку"},
+                status_code=500,
+            )
+        if renewed.get("error"):
+            return JSONResponse(
+                content={"status": "error", "message": renewed.get("error")},
                 status_code=500,
             )
 

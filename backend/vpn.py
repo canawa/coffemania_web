@@ -70,7 +70,7 @@ def _build_user_payload(username: str, expire_at_iso: str) -> dict[str, Any]:
 async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | None = None):
     headers = _build_headers()
     if headers is None:
-        return None, 500
+        return None, 500, "Remnawave не настроен: проверьте REMNAWAVE_BASE_URL и REMNAWAVE_TOKEN"
     url = f"{REMNAWAVE_BASE_URL.rstrip('/')}{endpoint}"
     try:
         async with aiohttp.ClientSession() as session:
@@ -85,24 +85,29 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
                     data = await resp.json()
                 except Exception:
                     data = None
-                return data, resp.status
+                text = await resp.text()
+                return data, resp.status, text
     except Exception as e:
         print(f"remnawave request error: {e}")
-        return None, 500
+        return None, 500, str(e)
 
 
 async def generate_vpn_key(user_id: int, duration_days: int, country: str):
+    if not REMNAWAVE_INTERNAL_SQUAD_ID:
+        return {
+            "error": "Не задан REMNAWAVE_INTERNAL_SQUAD_ID. Без internal squad Remnawave может возвращать access error."
+        }
     username = f"user_{user_id}_{secrets.token_hex(8)}"
     expire_at = datetime.now() + timedelta(days=duration_days)
     payload = _build_user_payload(username=username, expire_at_iso=expire_at.isoformat())
     payload["createdAt"] = datetime.now().isoformat()
-    created, status = await _request_json("POST", "/api/users", payload)
+    created, status, error_text = await _request_json("POST", "/api/users", payload)
     if status >= 400:
-        print(f"remnawave create user failed: {status}")
-        return None
+        print(f"remnawave create user failed: {status} | {error_text}")
+        return {"error": f"Remnawave create user failed ({status}): {error_text}"}
     sub = _extract_subscription_url(created if isinstance(created, dict) else {})
     if not sub:
-        fetched, fetched_status = await _request_json("GET", f"/api/users/{username}")
+        fetched, fetched_status, _ = await _request_json("GET", f"/api/users/{username}")
         if fetched_status < 400 and isinstance(fetched, dict):
             sub = _extract_subscription_url(fetched)
         if not sub and isinstance(created, dict):
@@ -110,14 +115,14 @@ async def generate_vpn_key(user_id: int, duration_days: int, country: str):
             if isinstance(token, str) and token.strip() and REMNAWAVE_BASE_URL:
                 sub = f"{REMNAWAVE_BASE_URL.rstrip('/')}/sub/{token.strip()}"
     if not sub:
-        return None
+        return {"error": "Remnawave не вернул subscription URL после создания пользователя"}
     return {"subscription_url": sub, "username": username}
 
 
 async def renew_vpn_key(username: str, duration_days: int, country: str):
-    fetched, status = await _request_json("GET", f"/api/users/{username}")
+    fetched, status, error_text = await _request_json("GET", f"/api/users/{username}")
     if status >= 400 or not isinstance(fetched, dict):
-        return None
+        return {"error": f"Не удалось получить пользователя в Remnawave ({status}): {error_text}"}
     current_expire_iso = fetched.get("expireAt") or fetched.get("expire_at")
     base_dt = datetime.now()
     if isinstance(current_expire_iso, str):
@@ -128,10 +133,10 @@ async def renew_vpn_key(username: str, duration_days: int, country: str):
             pass
     new_expire_dt = base_dt + timedelta(days=duration_days)
     update_payload = _build_user_payload(username=username, expire_at_iso=new_expire_dt.isoformat())
-    updated, update_status = await _request_json("PATCH", "/api/users", update_payload)
+    updated, update_status, update_error_text = await _request_json("PATCH", "/api/users", update_payload)
     if update_status >= 400:
-        print(f"remnawave renew failed: {update_status}")
-        return None
+        print(f"remnawave renew failed: {update_status} | {update_error_text}")
+        return {"error": f"Remnawave renew failed ({update_status}): {update_error_text}"}
     sub = _extract_subscription_url(updated if isinstance(updated, dict) else {})
     if not sub:
         sub = _extract_subscription_url(fetched)
