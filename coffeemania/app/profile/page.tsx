@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useId, useMemo, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 export default function ProfilePage() {
   const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
@@ -10,12 +10,6 @@ export default function ProfilePage() {
   const [topUpAmount, setTopUpAmount] = useState('500'); // сумма пополнения
   const [balance, setBalance] = useState(0)
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<
-    "germany1" | "germany2" | "austria" | "lte_bypass"
-  >("germany1");
-  const [selectedDuration, setSelectedDuration] = useState<
-    "week" | "month" | "half_year" | "year" | "lifetime"
-  >("month");
   const [isBuyingKey, setIsBuyingKey] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<{
@@ -39,51 +33,11 @@ export default function ProfilePage() {
     }>
   >([]);
 
-  const pricing = useMemo(() => {
-    const durationDaysByUi: Record<typeof selectedDuration, number> = {
-      week: 7,
-      month: 30,
-      half_year: 180,
-      year: 365,
-      lifetime: 0, // <=0 => expire=0 (no expiration) in backend/vpn.py
-    };
-
-    const priceByDurationDays: Record<number, number> = {
-      7: 50,
-      30: 150,
-      180: 600,
-      365: 1400,
-      0: 2900,
-    };
-
-    const durationDays = durationDaysByUi[selectedDuration];
-    const total = priceByDurationDays[durationDays] ?? null;
-
-    return { durationDays, total };
-  }, [selectedDuration]);
-
-  const countryOptions = useMemo(
-    () =>
-      [
-        { value: "germany1" as const, label: "Германия 1", flag: "germany" as const },
-        { value: "germany2" as const, label: "Германия 2", flag: "germany" as const },
-        { value: "austria" as const, label: "Австрия", flag: "austria" as const },
-        { value: "lte_bypass" as const, label: "ОБХОД LTE", flag: "russia" as const },
-      ] as const,
-    [],
-  );
-
-  const durationOptions = useMemo(
-    () =>
-      [
-        { value: "week" as const, label: "Неделя", badge: "7д" },
-        { value: "month" as const, label: "Месяц", badge: "1м" },
-        { value: "half_year" as const, label: "Полгода", badge: "6м" },
-        { value: "year" as const, label: "Год", badge: "1г" },
-        { value: "lifetime" as const, label: "Пожизненно", badge: "∞" },
-      ] as const,
-    [],
-  );
+  const subscriptionPlan = {
+    country: "germany1",
+    durationDays: 30,
+    total: 149,
+  } as const;
 
   const FlagSvg = ({ name }: { name: "germany" | "austria" | "russia" }) => {
     const common = {
@@ -192,215 +146,6 @@ export default function ProfilePage() {
     isMobileMenuOpen,
   );
 
-  function Dropdown<T extends string>(props: {
-    label: string;
-    value: T;
-    options: readonly { value: T; label: string; flag?: string; badge?: string }[];
-    onChange: (value: T) => void;
-  }) {
-    const { label, value, options, onChange } = props;
-    const id = useId();
-    const buttonRef = useRef<HTMLButtonElement | null>(null);
-    const panelRef = useRef<HTMLDivElement | null>(null);
-    const [open, setOpen] = useState(false);
-
-    const current = options.find((o) => o.value === value) ?? options[0];
-
-    const DurationBadgeSvg = ({ text, clipId }: { text: string; clipId: string }) => (
-      <svg
-        width="22"
-        height="16"
-        viewBox="0 0 22 16"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <defs>
-          <clipPath id={clipId}>
-            <rect x="0" y="0" width="22" height="16" rx="4" ry="4" />
-          </clipPath>
-        </defs>
-        <g clipPath={`url(#${clipId})`}>
-          {/* Coffee-like dark badge for contrast */}
-          <rect width="22" height="16" fill="#271310" />
-          <text
-            x="11"
-            y="11"
-            textAnchor="middle"
-            fontSize="9"
-            fontWeight="800"
-            fontFamily="Manrope, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
-            fill="#ffffff"
-          >
-            {text}
-          </text>
-        </g>
-      </svg>
-    );
-
-    const DurationBadge = ({ text, inverted }: { text: string; inverted?: boolean }) => {
-      const uid = useId();
-      const clipId = `dur-clip-${uid}`;
-      // Inverted is used on active (orange) option background.
-      return (
-        <span
-          className={[
-            "w-[22px] h-[16px] rounded-[4px] overflow-hidden shrink-0 flex items-center justify-center",
-            "shadow-[0_1px_0_rgba(0,0,0,0.06)] border",
-            inverted
-              ? "border-white/25 bg-white/10"
-              : "border-outline-variant/25 bg-surface",
-          ].join(" ")}
-        >
-          {inverted ? (
-            <svg
-              width="22"
-              height="16"
-              viewBox="0 0 22 16"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <defs>
-                <clipPath id={clipId}>
-                  <rect x="0" y="0" width="22" height="16" rx="4" ry="4" />
-                </clipPath>
-              </defs>
-              <g clipPath={`url(#${clipId})`}>
-                <rect width="22" height="16" fill="rgba(255,255,255,0.14)" />
-                <text
-                  x="11"
-                  y="11"
-                  textAnchor="middle"
-                  fontSize="9"
-                  fontWeight="800"
-                  fontFamily="Manrope, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
-                  fill="#ffffff"
-                >
-                  {text}
-                </text>
-              </g>
-            </svg>
-          ) : (
-            <DurationBadgeSvg text={text} clipId={clipId} />
-          )}
-        </span>
-      );
-    };
-
-    const Leading = (opt: { flag?: string; badge?: string }, inverted?: boolean) => {
-      if (opt.flag) return <FlagBadge name={opt.flag as any} />;
-      if (opt.badge) return <DurationBadge text={opt.badge} inverted={inverted} />;
-      return (
-        <span className="material-symbols-outlined text-primary text-[20px]">
-          public
-        </span>
-      );
-    };
-
-    useClickOutside([buttonRef, panelRef], () => setOpen(false), open);
-
-    useEffect(() => {
-      if (!open) return;
-      const onKeyDown = (e: KeyboardEvent) => {
-        if (e.key === "Escape") setOpen(false);
-      };
-      window.addEventListener("keydown", onKeyDown);
-      return () => window.removeEventListener("keydown", onKeyDown);
-    }, [open]);
-
-    return (
-      <div className="space-y-2">
-        <label
-          htmlFor={id}
-          className="block text-sm font-bold text-on-surface-variant uppercase tracking-widest"
-        >
-          {label}
-        </label>
-        <div className="relative">
-          <button
-            id={id}
-            ref={buttonRef}
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            className={[
-              "w-full text-left rounded-xl px-4 py-4 pr-12",
-              "bg-surface-container-high text-primary font-semibold",
-              "outline-none border-2 transition-colors",
-              open ? "border-tertiary-fixed" : "border-transparent hover:border-outline-variant/30",
-              "shadow-sm hover:shadow-md",
-              "focus-visible:border-tertiary-fixed",
-            ].join(" ")}
-            aria-haspopup="listbox"
-            aria-expanded={open}
-          >
-            <div className="flex items-center gap-3">
-              {Leading(current ?? {})}
-              <span className="truncate">{current?.label}</span>
-            </div>
-          </button>
-          <span
-            className={[
-              "pointer-events-none absolute right-4 top-1/2 -translate-y-1/2",
-              "material-symbols-outlined text-on-surface-variant transition-transform duration-200",
-              open ? "rotate-180" : "rotate-0",
-            ].join(" ")}
-          >
-            expand_more
-          </span>
-
-          <div
-            ref={panelRef}
-            className={[
-              "absolute left-0 right-0 mt-2 z-[120] origin-top",
-              "transition-all duration-200 ease-out",
-              open
-                ? "opacity-100 translate-y-0 scale-100 pointer-events-auto"
-                : "opacity-0 -translate-y-1 scale-[0.98] pointer-events-none",
-            ].join(" ")}
-          >
-            <div className="rounded-2xl bg-surface-container-lowest border border-outline-variant/20 shadow-2xl overflow-hidden">
-              <div className="p-2">
-                {options.map((opt) => {
-                  const active = opt.value === value;
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      onClick={() => {
-                        onChange(opt.value);
-                        setOpen(false);
-                      }}
-                      className={[
-                        "w-full flex items-center justify-between gap-3",
-                        "px-4 py-3 rounded-xl text-left font-semibold transition-colors",
-                        active
-                          ? "bg-tertiary-fixed text-on-tertiary-fixed"
-                          : "text-primary hover:bg-surface-container",
-                      ].join(" ")}
-                    >
-                      <span className="flex items-center gap-3 min-w-0">
-                        {opt.flag || opt.badge ? Leading(opt, active) : null}
-                        <span className="truncate">{opt.label}</span>
-                      </span>
-                      {active ? (
-                        <span className="material-symbols-outlined text-[20px]">
-                          check
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const handleLogout = () => {
     document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     window.location.href = "/";
@@ -471,8 +216,15 @@ export default function ProfilePage() {
     return `${s.slice(0, 12)}…${s.slice(-6)}`;
   };
 
-  const countryLabel = (country: string) =>
-    countryOptions.find((c) => c.value === (country as any))?.label ?? country;
+  const countryLabel = (country: string) => {
+    const labels: Record<string, string> = {
+      germany1: "Германия 1",
+      germany2: "Германия 2",
+      austria: "Австрия",
+      lte_bypass: "ОБХОД LTE",
+    };
+    return labels[country] ?? country;
+  };
 
   const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false; // lifetime
@@ -510,7 +262,6 @@ export default function ProfilePage() {
   };
 
   const buyVpnKey = async () => {
-    if (pricing.durationDays === null) return;
     setIsBuyingKey(true);
     setBuyKeyMessage(null);
 
@@ -518,12 +269,12 @@ export default function ProfilePage() {
       const endpoint = subscription.active ? `${API_BASE_URL}/renew_vpn` : `${API_BASE_URL}/buy_vpn`;
       const payload = subscription.active
         ? {
-            duration: pricing.durationDays,
+            duration: subscriptionPlan.durationDays,
             subscription_id: subscription.id,
           }
         : {
-            country: selectedCountry,
-            duration: pricing.durationDays,
+            country: subscriptionPlan.country,
+            duration: subscriptionPlan.durationDays,
           };
 
       const res = await apiFetch(endpoint, {
@@ -1037,7 +788,7 @@ export default function ProfilePage() {
                   {subscription.active ? "Продлить подписку" : "Купить подписку"}
                 </h2>
                 <p className="text-sm text-on-surface-variant mt-1">
-                  Выберите страну и длительность подписки.
+                  Единый тариф: 30 дней доступа.
                 </p>
               </div>
               <button
@@ -1051,31 +802,8 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Dropdown
-                  label="Страна"
-                  value={selectedCountry}
-                  options={countryOptions}
-                  onChange={setSelectedCountry}
-                />
-
-                <Dropdown
-                  label="Длительность"
-                  value={selectedDuration}
-                  options={durationOptions}
-                  onChange={setSelectedDuration}
-                />
-              </div>
-
               <div className="rounded-xl bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
-                Выбрано:{" "}
-                <span className="font-bold text-primary">
-                  {countryOptions.find((c) => c.value === selectedCountry)?.label}
-                </span>{" "}
-                ·{" "}
-                <span className="font-bold text-primary">
-                  {durationOptions.find((d) => d.value === selectedDuration)?.label}
-                </span>
+                Подписка на 30 дней. Локация выбирается автоматически.
               </div>
             </div>
 
@@ -1087,15 +815,13 @@ export default function ProfilePage() {
                       Итого
                     </div>
                     <div className="text-xs text-on-surface-variant">
-                      {pricing.durationDays
-                        ? `Срок: ${pricing.durationDays} дней`
-                        : "Пожизненно"}
+                      Срок: 30 дней
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-mono font-bold text-primary">
-                    {pricing.total !== null ? `${pricing.total}₽` : "—"}
+                    {subscriptionPlan.total} ₽
                   </div>
                 </div>
               </div>
@@ -1112,7 +838,7 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={buyVpnKey}
-                disabled={pricing.total === null || isBuyingKey}
+                disabled={isBuyingKey}
                 className="sm:flex-1 bg-primary text-on-primary py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined">arrow_forward</span>

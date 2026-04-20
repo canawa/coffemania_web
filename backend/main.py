@@ -56,6 +56,9 @@ cors_origins = [
 
 app = FastAPI()
 
+SUBSCRIPTION_PRICE = 149
+SUBSCRIPTION_DURATION_DAYS = 30
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -164,27 +167,7 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         cursor.execute("SELECT balance FROM users WHERE email = ? LIMIT 1", (payload['email'],))
         balance = cursor.fetchone()
 
-    allowed_countries = {"germany1", "germany2", "austria", "lte_bypass"}
-    if configuration.country not in allowed_countries:
-        return JSONResponse(
-            content={"status": "error", "message": "Недоступная локация"},
-            status_code=400,
-        )
-
-    price_by_duration = {
-        7: 50,
-        30: 150,
-        180: 600,
-        365: 1400,
-        0: 2900,
-    }
-
-    required = price_by_duration.get(configuration.duration) # дернуть по значению справа от ключа в dictionary
-    if required is None:
-        return JSONResponse(
-            content={"status": "error", "message": "Неверная продолжительность"},
-            status_code=400,
-        )
+    required = SUBSCRIPTION_PRICE
 
     if balance[0] < required:
         return JSONResponse(
@@ -192,7 +175,11 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
             status_code=400,
         )
 
-    generated = await generate_vpn_key(payload["email"], configuration.duration, configuration.country)
+    generated = await generate_vpn_key(
+        payload["email"],
+        SUBSCRIPTION_DURATION_DAYS,
+        "germany1",
+    )
     if not generated:
         return JSONResponse(
             content={"status": "error", "message": "Не удалось создать VPN ключ"},
@@ -224,17 +211,17 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
             )
 
         created_at = datetime.now()
-        expires_at = None if configuration.duration <= 0 else (created_at + timedelta(days=configuration.duration)).isoformat()
+        expires_at = created_at + timedelta(days=SUBSCRIPTION_DURATION_DAYS)
         cur.execute(
             "INSERT INTO vpn_keys (email, vpn_username, vpn_key, duration, country, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 payload["email"],
                 vpn_username,
                 key,
-                configuration.duration,
-                configuration.country,
+                SUBSCRIPTION_DURATION_DAYS,
+                "germany1",
                 created_at.isoformat(),
-                expires_at,
+                expires_at.isoformat(),
             ),
         )
         con.commit()
@@ -243,9 +230,9 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         "status": "success",
         "subscription_url": key,
         "vpn_username": vpn_username,
-        "country": configuration.country,
-        "duration": configuration.duration,
-        "expires_at": expires_at,
+        "country": "germany1",
+        "duration": SUBSCRIPTION_DURATION_DAYS,
+        "expires_at": expires_at.isoformat(),
     }
     
 
@@ -259,19 +246,7 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
             status_code=401,
         )
 
-    price_by_duration = {
-        7: 50,
-        30: 150,
-        180: 600,
-        365: 1400,
-        0: 2900,
-    }
-    required = price_by_duration.get(payload_req.duration)
-    if required is None:
-        return JSONResponse(
-            content={"status": "error", "message": "Неверная продолжительность"},
-            status_code=400,
-        )
+    required = SUBSCRIPTION_PRICE
 
     with sq.connect("database.db") as con:
         con.row_factory = sq.Row
@@ -341,7 +316,7 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
 
         renewed = await renew_vpn_key(
             username=target["vpn_username"],
-            duration_days=payload_req.duration,
+            duration_days=SUBSCRIPTION_DURATION_DAYS,
             country=target["country"],
         )
         if not renewed:
@@ -373,7 +348,7 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
             SET vpn_key = ?, duration = ?, expires_at = ?
             WHERE id = ?
             """,
-            (new_link, payload_req.duration, new_expires_at, target["id"]),
+            (new_link, SUBSCRIPTION_DURATION_DAYS, new_expires_at, target["id"]),
         )
         con.commit()
 
