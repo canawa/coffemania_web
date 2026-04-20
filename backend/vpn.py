@@ -2,11 +2,10 @@ import os
 import secrets
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import aiohttp
 import dotenv
-from marzban import MarzbanAPI
-from marzban.models import UserCreate, UserModify, ProxySettings
 
 dotenv_path = Path(__file__).with_name(".env.production")
 fallback_dotenv_path = Path(__file__).with_name(".env")
@@ -25,225 +24,119 @@ def _env_first(*keys: str):
     return None
 
 
-COUNTRIES = {
-    "germany1": {
-        "url": _env_first("MARZABAN_URL_GERMANY1", "MARZABAN_URL_GERMANY"),
-        "username": _env_first("MARZABAN_USERNAME_GERMANY1", "MARZABAN_USERNAME_GERMANY"),
-        "password": _env_first("MARZABAN_PASSWORD_GERMANY1", "MARZABAN_PASSWORD_GERMANY"),
-    },
-    "germany2": {
-        "url": _env_first("MARZABAN_URL_GERMANY2", "MARZABAN_URL_GERMANY_WHITELIST"),
-        "username": _env_first("MARZABAN_USERNAME_GERMANY2", "MARZABAN_USERNAME_GERMANY_WHITELIST"),
-        "password": _env_first("MARZABAN_PASSWORD_GERMANY2", "MARZABAN_PASSWORD_GERMANY_WHITELIST"),
-    },
-    "austria": {
-        "url": _env_first("MARZABAN_URL_AUSTRIA"),
-        "username": _env_first("MARZABAN_USERNAME_AUSTRIA"),
-        "password": _env_first("MARZABAN_PASSWORD_AUSTRIA"),
-    },
-    "lte_bypass": {
-        "url": _env_first("MARZABAN_URL_WHITELIST"),
-        "username": _env_first("MARZABAN_USERNAME_WHITELIST"),
-        "password": _env_first("MARZABAN_PASSWORD_WHITELIST"),
-    },
-}
-
-TOKENS = {}
+REMNAWAVE_BASE_URL = _env_first("REMNAWAVE_BASE_URL")
+REMNAWAVE_TOKEN = _env_first("REMNAWAVE_TOKEN")
+REMNAWAVE_INTERNAL_SQUAD_ID = _env_first("REMNAWAVE_INTERNAL_SQUAD_ID")
 
 
-def get_api(country: str):
-    cfg = COUNTRIES[country]
-    api = MarzbanAPI(base_url=cfg["url"])
-    return api, cfg
-
-
-async def get_marzban_token(country: str):
-    api, cfg = get_api(country)
-
-    token = await api.get_token(
-        username=cfg["username"],
-        password=cfg["password"]
-    )
-
-    TOKENS[country] = token.access_token
-    return TOKENS[country]
-
-
-def _extract_subscription_url(user_info) -> str | None:
-    if hasattr(user_info, "subscription_url") and user_info.subscription_url:
-        return user_info.subscription_url
-
-    links = getattr(user_info, "links", None)
-    if links:
-        if isinstance(links, list) and len(links) > 0:
-            for link in links:
-                if isinstance(link, str) and link.startswith("vless://"):
-                    return link
-            return links[0]
-        if isinstance(links, str):
-            return links
+def _extract_subscription_url(user_info: Any) -> str | None:
+    if not isinstance(user_info, dict):
+        return None
+    for key in ("subscriptionUrl", "subscription_url", "subscription", "subscriptionLink"):
+        value = user_info.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    links = user_info.get("links")
+    if isinstance(links, list):
+        for link in links:
+            if isinstance(link, str) and link.strip():
+                return link.strip()
+    if isinstance(links, str) and links.strip():
+        return links.strip()
     return None
 
 
-async def generate_vpn_key(user_id: int, duration_days: int, country: str):
+def _build_headers() -> dict[str, str] | None:
+    if not REMNAWAVE_BASE_URL or not REMNAWAVE_TOKEN:
+        return None
+    return {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {REMNAWAVE_TOKEN}",
+    }
 
-    api, cfg = get_api(country)
 
-    token = TOKENS.get(country)
-    if not token:
-        token = await get_marzban_token(country)
-        if not token:
-            return None
+def _build_user_payload(username: str, expire_at_iso: str) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "username": username,
+        "trafficLimitBytes": 0,
+        "expireAt": expire_at_iso,
+        "hwidDeviceLimit": 3,
+    }
+    if REMNAWAVE_INTERNAL_SQUAD_ID:
+        payload["activeInternalSquads"] = [REMNAWAVE_INTERNAL_SQUAD_ID]
+    return payload
 
-    username = f"user_{user_id}_{secrets.token_hex(8)}"
 
-    expire_ts = 0 if duration_days <= 0 else int(
-        (datetime.now() + timedelta(days=duration_days)).timestamp()
-    )
-
+async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | None = None):
+    headers = _build_headers()
+    if headers is None:
+        return None, 500
+    url = f"{REMNAWAVE_BASE_URL.rstrip('/')}{endpoint}"
     try:
-        new_user = UserCreate(
-            username=username,
-            proxies={
-                "vless": ProxySettings(flow="xtls-rprx-vision"),
-                "shadowsocks": ProxySettings(),
-            },
-            expire=expire_ts,
-            data_limit=0
-        )
-
-        await api.add_user(user=new_user, token=token)
-        user_info = await api.get_user(username=username, token=token)
-
-        subscription_url = _extract_subscription_url(user_info)
-        if subscription_url:
-            return {"subscription_url": subscription_url, "username": username}
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"Authorization": f"Bearer {token}"}
-                async with session.get(
-                    f"{cfg['url']}/api/v1/user/{username}/subscription",
-                    headers=headers,
-                    params={"client_type": "v2ray"},
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    if resp.status == 200:
-                        text = await resp.text()
-                        if text.startswith(("vless://", "vmess://", "ss://")):
-                            return {"subscription_url": text, "username": username}
-        except Exception as e:
-            print(f"subscription error: {e}")
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"Authorization": f"Bearer {token}"}
-                async with session.get(
-                    f"{cfg['url']}/api/v1/user/{username}/links",
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=10)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-
-                        if isinstance(data, list) and len(data) > 0:
-                            for link in data:
-                                if isinstance(link, str) and link.startswith("vless://"):
-                                    return {"subscription_url": link, "username": username}
-                            return {"subscription_url": data[0], "username": username}
-
-                        elif isinstance(data, str):
-                            return {"subscription_url": data, "username": username}
-
-        except Exception as e:
-            print(f"links error: {e}")
-
-        return None
-
+        async with aiohttp.ClientSession() as session:
+            async with session.request(
+                method,
+                url,
+                headers=headers,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=15),
+            ) as resp:
+                try:
+                    data = await resp.json()
+                except Exception:
+                    data = None
+                return data, resp.status
     except Exception as e:
-        print(f"create user error: {e}")
+        print(f"remnawave request error: {e}")
+        return None, 500
 
-        if "401" in str(e) or "Unauthorized" in str(e):
-            token = await get_marzban_token(country)
-            try:
-                await api.add_user(user=new_user, token=token)
-                user_info = await api.get_user(username=username, token=token)
 
-                subscription_url = _extract_subscription_url(user_info)
-                if subscription_url:
-                    return {"subscription_url": subscription_url, "username": username}
-
-            except Exception as e2:
-                print(f"retry error: {e2}")
-
+async def generate_vpn_key(user_id: int, duration_days: int, country: str):
+    username = f"user_{user_id}_{secrets.token_hex(8)}"
+    expire_at = datetime.now() + timedelta(days=duration_days)
+    payload = _build_user_payload(username=username, expire_at_iso=expire_at.isoformat())
+    payload["createdAt"] = datetime.now().isoformat()
+    created, status = await _request_json("POST", "/api/users", payload)
+    if status >= 400:
+        print(f"remnawave create user failed: {status}")
         return None
+    sub = _extract_subscription_url(created if isinstance(created, dict) else {})
+    if not sub:
+        fetched, fetched_status = await _request_json("GET", f"/api/users/{username}")
+        if fetched_status < 400 and isinstance(fetched, dict):
+            sub = _extract_subscription_url(fetched)
+        if not sub and isinstance(created, dict):
+            token = created.get("subscriptionToken") or created.get("subscription_token")
+            if isinstance(token, str) and token.strip() and REMNAWAVE_BASE_URL:
+                sub = f"{REMNAWAVE_BASE_URL.rstrip('/')}/sub/{token.strip()}"
+    if not sub:
+        return None
+    return {"subscription_url": sub, "username": username}
 
 
 async def renew_vpn_key(username: str, duration_days: int, country: str):
-    api, _ = get_api(country)
-    token = TOKENS.get(country)
-    if not token:
-        token = await get_marzban_token(country)
-        if not token:
-            return None
-
-    try:
-        user_info = await api.get_user(username=username, token=token)
-        current_expire = int(user_info.expire or 0)
-        now_ts = int(datetime.now().timestamp())
-        base_ts = max(current_expire, now_ts) if current_expire > 0 else now_ts
-        new_expire = 0 if duration_days <= 0 else base_ts + duration_days * 24 * 60 * 60
-
-        await api.modify_user(
-            username=username,
-            token=token,
-            user=UserModify(
-                proxies=user_info.proxies,
-                inbounds=user_info.inbounds,
-                data_limit=user_info.data_limit,
-                data_limit_reset_strategy=user_info.data_limit_reset_strategy,
-                status="active",
-                expire=new_expire,
-            ),
-        )
-
-        updated = await api.get_user(username=username, token=token)
-        return {
-            "subscription_url": _extract_subscription_url(updated),
-            "expire": int(updated.expire or 0),
-            "username": username,
-        }
-    except Exception as e:
-        print(f"renew user error: {e}")
-        if "401" in str(e) or "Unauthorized" in str(e):
-            token = await get_marzban_token(country)
-            if not token:
-                return None
-            try:
-                user_info = await api.get_user(username=username, token=token)
-                current_expire = int(user_info.expire or 0)
-                now_ts = int(datetime.now().timestamp())
-                base_ts = max(current_expire, now_ts) if current_expire > 0 else now_ts
-                new_expire = 0 if duration_days <= 0 else base_ts + duration_days * 24 * 60 * 60
-
-                await api.modify_user(
-                    username=username,
-                    token=token,
-                    user=UserModify(
-                        proxies=user_info.proxies,
-                        inbounds=user_info.inbounds,
-                        data_limit=user_info.data_limit,
-                        data_limit_reset_strategy=user_info.data_limit_reset_strategy,
-                        status="active",
-                        expire=new_expire,
-                    ),
-                )
-                updated = await api.get_user(username=username, token=token)
-                return {
-                    "subscription_url": _extract_subscription_url(updated),
-                    "expire": int(updated.expire or 0),
-                    "username": username,
-                }
-            except Exception as retry_error:
-                print(f"renew retry error: {retry_error}")
+    fetched, status = await _request_json("GET", f"/api/users/{username}")
+    if status >= 400 or not isinstance(fetched, dict):
         return None
+    current_expire_iso = fetched.get("expireAt") or fetched.get("expire_at")
+    base_dt = datetime.now()
+    if isinstance(current_expire_iso, str):
+        try:
+            parsed = datetime.fromisoformat(current_expire_iso.replace("Z", "+00:00"))
+            base_dt = max(base_dt, parsed.replace(tzinfo=None))
+        except Exception:
+            pass
+    new_expire_dt = base_dt + timedelta(days=duration_days)
+    update_payload = _build_user_payload(username=username, expire_at_iso=new_expire_dt.isoformat())
+    updated, update_status = await _request_json("PATCH", "/api/users", update_payload)
+    if update_status >= 400:
+        print(f"remnawave renew failed: {update_status}")
+        return None
+    sub = _extract_subscription_url(updated if isinstance(updated, dict) else {})
+    if not sub:
+        sub = _extract_subscription_url(fetched)
+    return {
+        "subscription_url": sub,
+        "expire": int(new_expire_dt.timestamp()),
+        "username": username,
+    }
