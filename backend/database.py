@@ -33,6 +33,7 @@ def create_tables():
         CREATE TABLE IF NOT EXISTS vpn_keys (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT NOT NULL,
+            vpn_username TEXT,
             vpn_key TEXT NOT NULL,
             duration INTEGER NOT NULL,
             country TEXT NOT NULL,
@@ -72,5 +73,10 @@ def create_tables():
         existing_cols = {row[1] for row in cursor.fetchall()}
         if "promo_code" not in existing_cols:
             cursor.execute("ALTER TABLE transactions ADD COLUMN promo_code TEXT")
+
+        cursor.execute("PRAGMA table_info(vpn_keys)")
+        vpn_cols = {row[1] for row in cursor.fetchall()}
+        if "vpn_username" not in vpn_cols:
+            cursor.execute("ALTER TABLE vpn_keys ADD COLUMN vpn_username TEXT")
 
         con.commit()

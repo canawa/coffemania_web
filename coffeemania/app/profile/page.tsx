@@ -18,6 +18,12 @@ export default function ProfilePage() {
   >("month");
   const [isBuyingKey, setIsBuyingKey] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<{
+    id?: number;
+    active: boolean;
+    subscription_url: string | null;
+    expires_at?: string | null;
+  }>({ active: false, subscription_url: null });
   const [copyToast, setCopyToast] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [ownReferralCode, setOwnReferralCode] = useState<string | null>(null);
@@ -509,16 +515,24 @@ export default function ProfilePage() {
     setBuyKeyMessage(null);
 
     try {
-      const res = await apiFetch(`${API_BASE_URL}/buy_vpn`, {
+      const endpoint = subscription.active ? `${API_BASE_URL}/renew_vpn` : `${API_BASE_URL}/buy_vpn`;
+      const payload = subscription.active
+        ? {
+            duration: pricing.durationDays,
+            subscription_id: subscription.id,
+          }
+        : {
+            country: selectedCountry,
+            duration: pricing.durationDays,
+          };
+
+      const res = await apiFetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({
-          country: selectedCountry,
-          duration: pricing.durationDays,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const contentType = res.headers.get("content-type") ?? "";
@@ -534,18 +548,58 @@ export default function ProfilePage() {
         return;
       }
 
-      // Success response may be a plain string with generated key.
-      setBuyKeyMessage("Ключ успешно куплен.");
+      let subscriptionUrl: string | null = null;
+      if (contentType.includes("application/json")) {
+        const data = await res.json();
+        subscriptionUrl = data?.subscription_url ?? null;
+      } else {
+        const text = (await res.text()).trim();
+        subscriptionUrl = text || null;
+      }
+
+      setBuyKeyMessage(
+        subscriptionUrl
+          ? subscription.active
+            ? `Подписка продлена. Ссылка: ${subscriptionUrl}`
+            : `Подписка активирована. Ссылка: ${subscriptionUrl}`
+          : subscription.active
+            ? "Подписка продлена."
+            : "Подписка активирована.",
+      );
       const newBalance = await getBalance();
       setBalance(newBalance);
       const keys = await getVpnKeys();
       setVpnKeys(keys);
+      const sub = await getSubscription();
+      setSubscription(sub);
       setIsAddKeyOpen(false);
     } catch (e) {
-      setBuyKeyMessage(e instanceof Error ? e.message : "Не удалось купить ключ");
+      setBuyKeyMessage(e instanceof Error ? e.message : "Не удалось купить подписку");
     } finally {
       setIsBuyingKey(false);
     }
+  };
+
+  const getSubscription = async () => {
+    const res = await apiFetch(`${API_BASE_URL}/subscription`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (res.status === 401 || !res.ok) {
+      return { active: false, subscription_url: null };
+    }
+    const data = (await res.json()) as {
+      id?: number;
+      active?: boolean;
+      subscription_url?: string | null;
+      expires_at?: string | null;
+    };
+    return {
+      id: data?.id,
+      active: Boolean(data?.active),
+      subscription_url: data?.subscription_url ?? null,
+      expires_at: data?.expires_at ?? null,
+    };
   };
 
   const getBalance = async () => {
@@ -573,6 +627,12 @@ export default function ProfilePage() {
       setVpnKeys(keys);
     };
     fetchKeys();
+
+    const fetchSubscription = async () => {
+      const sub = await getSubscription();
+      setSubscription(sub);
+    };
+    fetchSubscription();
 
     const fetchOwnReferral = async () => {
       try {
@@ -747,7 +807,7 @@ export default function ProfilePage() {
             onClick={() => setIsAddKeyOpen(true)}
           >
             <span className="material-symbols-outlined">add_circle</span>
-            Добавить ключ
+            {subscription.active ? "Продлить подписку" : "Купить подписку"}
           </button>
         </header>
 
@@ -774,7 +834,7 @@ export default function ProfilePage() {
                       onClick={() => setIsAddKeyOpen(true)}
                       type="button"
                     >
-                      Добавить ключ
+                      {subscription.active ? "Продлить подписку" : "Купить подписку"}
                     </button>
                     <Link
                       className="px-8 py-3 rounded-full font-bold border border-outline-variant/40 text-primary hover:bg-surface-container transition-colors text-center"
@@ -973,9 +1033,11 @@ export default function ProfilePage() {
           <div className="bg-surface-container-lowest w-full max-w-lg rounded-[24px] shadow-2xl overflow-visible flex flex-col relative">
             <div className="px-6 py-6 border-b border-outline-variant/20 flex justify-between items-center">
               <div>
-                <h2 className="text-2xl font-serif font-bold text-primary">Добавить ключ</h2>
+                <h2 className="text-2xl font-serif font-bold text-primary">
+                  {subscription.active ? "Продлить подписку" : "Купить подписку"}
+                </h2>
                 <p className="text-sm text-on-surface-variant mt-1">
-                  Выберите страну и длительность доступа.
+                  Выберите страну и длительность подписки.
                 </p>
               </div>
               <button

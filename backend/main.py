@@ -15,6 +15,7 @@ from models import (
     User,
     PaymentRequest,
     VpnConfiguration,
+    RenewSubscriptionRequest,
     ReferralCodeRequest,
     AdminLoginRequest,
 )
@@ -23,7 +24,7 @@ from datetime import datetime, timedelta
 import time
 from auth import create_jwt, verify_jwt, create_admin_jwt
 from yookassa import Configuration, Payment # для работы с Юкассой
-from vpn import generate_vpn_key
+from vpn import generate_vpn_key, renew_vpn_key
 
 class LoginRequest(BaseModel):
     email: str
@@ -191,10 +192,17 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
             status_code=400,
         )
 
-    key = await generate_vpn_key(payload["email"], configuration.duration, configuration.country)
-    if not key:
+    generated = await generate_vpn_key(payload["email"], configuration.duration, configuration.country)
+    if not generated:
         return JSONResponse(
             content={"status": "error", "message": "Не удалось создать VPN ключ"},
+            status_code=500,
+        )
+    key = generated.get("subscription_url")
+    vpn_username = generated.get("username")
+    if not key:
+        return JSONResponse(
+            content={"status": "error", "message": "Не удалось получить ссылку подписки"},
             status_code=500,
         )
 
@@ -218,9 +226,10 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         created_at = datetime.now()
         expires_at = None if configuration.duration <= 0 else (created_at + timedelta(days=configuration.duration)).isoformat()
         cur.execute(
-            "INSERT INTO vpn_keys (email, vpn_key, duration, country, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO vpn_keys (email, vpn_username, vpn_key, duration, country, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (
                 payload["email"],
+                vpn_username,
                 key,
                 configuration.duration,
                 configuration.country,
@@ -230,8 +239,151 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         )
         con.commit()
     print(key)
-    return key
+    return {
+        "status": "success",
+        "subscription_url": key,
+        "vpn_username": vpn_username,
+        "country": configuration.country,
+        "duration": configuration.duration,
+        "expires_at": expires_at,
+    }
     
+
+@app.post("/renew_vpn")
+async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    price_by_duration = {
+        7: 50,
+        30: 150,
+        180: 600,
+        365: 1400,
+        0: 2900,
+    }
+    required = price_by_duration.get(payload_req.duration)
+    if required is None:
+        return JSONResponse(
+            content={"status": "error", "message": "Неверная продолжительность"},
+            status_code=400,
+        )
+
+    with sq.connect("database.db") as con:
+        con.row_factory = sq.Row
+        cur = con.cursor()
+        cur.execute("SELECT balance FROM users WHERE email = ? LIMIT 1", (payload["email"],))
+        balance_row = cur.fetchone()
+        balance = float(balance_row["balance"] if balance_row else 0)
+        if balance < required:
+            return JSONResponse(
+                content={"status": "error", "message": "Недостаточно средств"},
+                status_code=400,
+            )
+
+        if payload_req.subscription_id:
+            cur.execute(
+                """
+                SELECT id, vpn_username, vpn_key, country, expires_at
+                FROM vpn_keys
+                WHERE id = ? AND email = ?
+                LIMIT 1
+                """,
+                (payload_req.subscription_id, payload["email"]),
+            )
+            target = cur.fetchone()
+        else:
+            cur.execute(
+                """
+                SELECT id, vpn_username, vpn_key, country, expires_at
+                FROM vpn_keys
+                WHERE email = ?
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                (payload["email"],),
+            )
+            target = cur.fetchone()
+
+        if not target:
+            return JSONResponse(
+                content={"status": "error", "message": "Активная подписка не найдена"},
+                status_code=404,
+            )
+
+        now = datetime.now()
+        expires_at = target["expires_at"]
+        if expires_at:
+            try:
+                if datetime.fromisoformat(expires_at) <= now:
+                    return JSONResponse(
+                        content={"status": "error", "message": "Подписка истекла, оформите новую"},
+                        status_code=400,
+                    )
+            except ValueError:
+                return JSONResponse(
+                    content={"status": "error", "message": "Некорректная дата подписки"},
+                    status_code=400,
+                )
+
+        if not target["vpn_username"]:
+            return JSONResponse(
+                content={
+                    "status": "error",
+                    "message": "Эту подписку нельзя продлить автоматически, оформите новую",
+                },
+                status_code=400,
+            )
+
+        renewed = await renew_vpn_key(
+            username=target["vpn_username"],
+            duration_days=payload_req.duration,
+            country=target["country"],
+        )
+        if not renewed:
+            return JSONResponse(
+                content={"status": "error", "message": "Не удалось продлить подписку"},
+                status_code=500,
+            )
+
+        cur.execute(
+            """
+            UPDATE users
+            SET balance = balance - ?
+            WHERE email = ? AND balance >= ?
+            """,
+            (required, payload["email"], required),
+        )
+        if cur.rowcount == 0:
+            return JSONResponse(
+                content={"status": "error", "message": "Недостаточно средств"},
+                status_code=400,
+            )
+
+        expire_ts = renewed.get("expire", 0) or 0
+        new_expires_at = None if expire_ts <= 0 else datetime.fromtimestamp(expire_ts).isoformat()
+        new_link = renewed.get("subscription_url") or target["vpn_key"]
+        cur.execute(
+            """
+            UPDATE vpn_keys
+            SET vpn_key = ?, duration = ?, expires_at = ?
+            WHERE id = ?
+            """,
+            (new_link, payload_req.duration, new_expires_at, target["id"]),
+        )
+        con.commit()
+
+    return {
+        "status": "success",
+        "subscription_url": renewed.get("subscription_url") or target["vpn_key"],
+        "expires_at": new_expires_at,
+        "subscription_id": target["id"],
+    }
+
 
 @app.post('/create_payment')
 def create_payment(payment: PaymentRequest, request: Request): # обязательно PyDantic модель иначе не работает
@@ -425,6 +577,60 @@ def get_vpn_keys(request: Request):
         rows = cur.fetchall()
 
     return [dict(r) for r in rows]
+
+
+@app.get("/subscription")
+def get_subscription(request: Request):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    with sq.connect("database.db") as con:
+        con.row_factory = sq.Row
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT vpn_key, country, created_at, expires_at
+            , id
+            FROM vpn_keys
+            WHERE email = ?
+            ORDER BY id DESC
+            """,
+            (payload["email"],),
+        )
+        rows = cur.fetchall()
+
+    now = datetime.now()
+    for row in rows:
+        expires_at = row["expires_at"]
+        if not expires_at:
+            return {
+                "active": True,
+                "id": row["id"],
+                "subscription_url": row["vpn_key"],
+                "country": row["country"],
+                "expires_at": None,
+                "created_at": row["created_at"],
+            }
+
+        try:
+            if datetime.fromisoformat(expires_at) > now:
+                return {
+                    "active": True,
+                    "id": row["id"],
+                    "subscription_url": row["vpn_key"],
+                    "country": row["country"],
+                    "expires_at": expires_at,
+                    "created_at": row["created_at"],
+                }
+        except ValueError:
+            continue
+
+    return {"active": False, "subscription_url": None}
 
 
 @app.get("/referral")

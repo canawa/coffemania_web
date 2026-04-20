@@ -14,6 +14,11 @@ class VpnConfiguration(BaseModel):
     duration: int
     country: str
 
+
+class RenewSubscriptionRequest(BaseModel):
+    duration: int
+    subscription_id: Optional[int] = None
+
 class ReferralCodeRequest(BaseModel):
     code: str
 

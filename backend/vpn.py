@@ -6,7 +6,7 @@ from pathlib import Path
 import aiohttp
 import dotenv
 from marzban import MarzbanAPI
-from marzban.models import UserCreate, ProxySettings
+from marzban.models import UserCreate, UserModify, ProxySettings
 
 dotenv_path = Path(__file__).with_name(".env.production")
 fallback_dotenv_path = Path(__file__).with_name(".env")
@@ -69,7 +69,23 @@ async def get_marzban_token(country: str):
     return TOKENS[country]
 
 
-async def generate_vpn_key(user_id: int, duration_days: int, country: str) -> str:
+def _extract_subscription_url(user_info) -> str | None:
+    if hasattr(user_info, "subscription_url") and user_info.subscription_url:
+        return user_info.subscription_url
+
+    links = getattr(user_info, "links", None)
+    if links:
+        if isinstance(links, list) and len(links) > 0:
+            for link in links:
+                if isinstance(link, str) and link.startswith("vless://"):
+                    return link
+            return links[0]
+        if isinstance(links, str):
+            return links
+    return None
+
+
+async def generate_vpn_key(user_id: int, duration_days: int, country: str):
 
     api, cfg = get_api(country)
 
@@ -99,18 +115,9 @@ async def generate_vpn_key(user_id: int, duration_days: int, country: str) -> st
         await api.add_user(user=new_user, token=token)
         user_info = await api.get_user(username=username, token=token)
 
-        links = None
-        if hasattr(user_info, 'links') and user_info.links:
-            links = user_info.links
-
-        if links:
-            if isinstance(links, list) and len(links) > 0:
-                for link in links:
-                    if isinstance(link, str) and link.startswith("vless://"):
-                        return link
-                return links[0]
-            elif isinstance(links, str):
-                return links
+        subscription_url = _extract_subscription_url(user_info)
+        if subscription_url:
+            return {"subscription_url": subscription_url, "username": username}
 
         try:
             async with aiohttp.ClientSession() as session:
@@ -124,7 +131,7 @@ async def generate_vpn_key(user_id: int, duration_days: int, country: str) -> st
                     if resp.status == 200:
                         text = await resp.text()
                         if text.startswith(("vless://", "vmess://", "ss://")):
-                            return text
+                            return {"subscription_url": text, "username": username}
         except Exception as e:
             print(f"subscription error: {e}")
 
@@ -142,11 +149,11 @@ async def generate_vpn_key(user_id: int, duration_days: int, country: str) -> st
                         if isinstance(data, list) and len(data) > 0:
                             for link in data:
                                 if isinstance(link, str) and link.startswith("vless://"):
-                                    return link
-                            return data[0]
+                                    return {"subscription_url": link, "username": username}
+                            return {"subscription_url": data[0], "username": username}
 
                         elif isinstance(data, str):
-                            return data
+                            return {"subscription_url": data, "username": username}
 
         except Exception as e:
             print(f"links error: {e}")
@@ -162,12 +169,81 @@ async def generate_vpn_key(user_id: int, duration_days: int, country: str) -> st
                 await api.add_user(user=new_user, token=token)
                 user_info = await api.get_user(username=username, token=token)
 
-                if hasattr(user_info, 'links') and user_info.links:
-                    if isinstance(user_info.links, list):
-                        return user_info.links[0]
-                    return user_info.links
+                subscription_url = _extract_subscription_url(user_info)
+                if subscription_url:
+                    return {"subscription_url": subscription_url, "username": username}
 
             except Exception as e2:
                 print(f"retry error: {e2}")
 
+        return None
+
+
+async def renew_vpn_key(username: str, duration_days: int, country: str):
+    api, _ = get_api(country)
+    token = TOKENS.get(country)
+    if not token:
+        token = await get_marzban_token(country)
+        if not token:
+            return None
+
+    try:
+        user_info = await api.get_user(username=username, token=token)
+        current_expire = int(user_info.expire or 0)
+        now_ts = int(datetime.now().timestamp())
+        base_ts = max(current_expire, now_ts) if current_expire > 0 else now_ts
+        new_expire = 0 if duration_days <= 0 else base_ts + duration_days * 24 * 60 * 60
+
+        await api.modify_user(
+            username=username,
+            token=token,
+            user=UserModify(
+                proxies=user_info.proxies,
+                inbounds=user_info.inbounds,
+                data_limit=user_info.data_limit,
+                data_limit_reset_strategy=user_info.data_limit_reset_strategy,
+                status="active",
+                expire=new_expire,
+            ),
+        )
+
+        updated = await api.get_user(username=username, token=token)
+        return {
+            "subscription_url": _extract_subscription_url(updated),
+            "expire": int(updated.expire or 0),
+            "username": username,
+        }
+    except Exception as e:
+        print(f"renew user error: {e}")
+        if "401" in str(e) or "Unauthorized" in str(e):
+            token = await get_marzban_token(country)
+            if not token:
+                return None
+            try:
+                user_info = await api.get_user(username=username, token=token)
+                current_expire = int(user_info.expire or 0)
+                now_ts = int(datetime.now().timestamp())
+                base_ts = max(current_expire, now_ts) if current_expire > 0 else now_ts
+                new_expire = 0 if duration_days <= 0 else base_ts + duration_days * 24 * 60 * 60
+
+                await api.modify_user(
+                    username=username,
+                    token=token,
+                    user=UserModify(
+                        proxies=user_info.proxies,
+                        inbounds=user_info.inbounds,
+                        data_limit=user_info.data_limit,
+                        data_limit_reset_strategy=user_info.data_limit_reset_strategy,
+                        status="active",
+                        expire=new_expire,
+                    ),
+                )
+                updated = await api.get_user(username=username, token=token)
+                return {
+                    "subscription_url": _extract_subscription_url(updated),
+                    "expire": int(updated.expire or 0),
+                    "username": username,
+                }
+            except Exception as retry_error:
+                print(f"renew retry error: {retry_error}")
         return None
