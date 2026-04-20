@@ -803,7 +803,7 @@ export default function ProfilePage() {
 
             <div className="p-6 space-y-6">
               <div className="rounded-xl bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
-                Подписка на 30 дней. Локация выбирается автоматически.
+                Подписка на 30 дней. Содержит доступ к 4 локациям.
               </div>
             </div>
 
