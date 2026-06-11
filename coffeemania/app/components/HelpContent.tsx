@@ -18,14 +18,6 @@ export default function HelpContent() {
         </div>
 
         <div className="rounded-xl bg-surface-container-low p-5">
-          <h2 className="text-lg font-bold text-primary">Как подключиться в приложении Amnezia?</h2>
-          <p className="mt-2">
-            Откройте приложение, нажмите «+», вставьте ссылку подписки, нажмите Continue и затем Connect.
-            Подробная инструкция доступна на странице «Guide».
-          </p>
-        </div>
-
-        <div className="rounded-xl bg-surface-container-low p-5">
           <h2 className="text-lg font-bold text-primary">Почему не проходит вход в кабинет?</h2>
           <p className="mt-2">
             Проверьте корректность email/пароля и включены ли cookies в браузере.
