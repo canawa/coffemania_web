@@ -27,30 +27,30 @@
   --surface-dim: var(--cappuccino);
   --on-primary-fixed-variant: var(--mocha);
   --on-tertiary-container: #8a6040;
-  --surface-container-lowest: #ffffff;
+  --surface-container-lowest: var(--cappuccino);
   --on-secondary-fixed: var(--espresso);
   --error-container: #ffdad6;
   --primary-fixed: var(--cappuccino);
-  --on-surface-variant: var(--mocha);
-  --on-tertiary: #ffffff;
+  --on-surface-variant: var(--espresso);
+  --on-tertiary: var(--milk-foam);
   --inverse-primary: var(--latte);
-  --tertiary-fixed-dim: #a07850;
+  --tertiary-fixed-dim: var(--mocha);
   --tertiary-fixed: var(--cappuccino);
-  --on-error: #ffffff;
+  --on-error: var(--milk-foam);
   --inverse-surface: var(--espresso);
   --surface-bright: var(--milk-foam);
   --on-background: var(--espresso);
   --outline: var(--mocha);
   --surface-container-low: var(--milk-foam);
   --inverse-on-surface: var(--milk-foam);
-  --on-secondary: #ffffff;
+  --on-secondary: var(--milk-foam);
   --tertiary: var(--espresso);
   --tertiary-container: #5c3a28;
   --secondary-fixed: var(--latte);
   --surface-container: var(--cappuccino);
   --surface-tint: var(--mocha);
   --on-primary: var(--milk-foam);
-  --on-tertiary-fixed-variant: var(--mocha);
+  --on-tertiary-fixed-variant: var(--espresso);
   --secondary: var(--mocha);
   --primary-container: #5c2a2a;
   --error: #ba1a1a;
@@ -59,6 +59,13 @@
   --surface-variant: var(--cappuccino);
   --on-surface: var(--espresso);
   --on-secondary-fixed-variant: var(--mocha);
+
+  --button: var(--espresso);
+  --on-button: var(--milk-foam);
+  --button-hover: var(--primary-container);
+
+  --header-bg: var(--milk-foam);
+  --header-divider: var(--cappuccino);
 }
 
 .dark {
@@ -113,6 +120,13 @@
   --surface-variant: #322522;
   --on-surface: #f2e8df;
   --on-secondary-fixed-variant: #8c7a72;
+
+  --button: #ffb86a;
+  --on-button: #1a1110;
+  --button-hover: #f0a855;
+
+  --header-bg: #1a1110;
+  --header-divider: #423431;
 }
 
 @theme inline {
@@ -167,6 +181,11 @@
   --color-surface-variant: var(--surface-variant);
   --color-on-surface: var(--on-surface);
   --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-button: var(--button);
+  --color-on-button: var(--on-button);
+  --color-button-hover: var(--button-hover);
+  --color-header: var(--header-bg);
+  --color-header-divider: var(--header-divider);
 
   /* Fonts */
   --font-body: var(--font-body);

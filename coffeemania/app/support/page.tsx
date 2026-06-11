@@ -24,7 +24,7 @@ export default function SupportPage() {
                 Telegram
               </div>
               <div className="mt-2 text-lg font-bold text-primary">
-                @CoffemaniaSupport
+                @coffeemaniasup2
               </div>
             </div>
 

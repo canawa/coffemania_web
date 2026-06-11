@@ -121,14 +121,14 @@ export default function LoginPage() {
             </Link>
             <ThemeToggle isDark={isDark} onChange={setTheme} />
             <Link
-              className="shrink-0 bg-primary dark:bg-[#423431] text-on-primary dark:text-[#f2e8df] px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+              className="shrink-0 bg-button text-on-button px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
               href="/login"
             >
               Войти
             </Link>
           </div>
         </div>
-        <div className="bg-surface-container dark:bg-[#423431] h-px w-full" />
+        <div className="bg-[#DDD0C8] dark:bg-[#423431] h-px w-full" />
       </nav>
 
       <main className="px-4 md:px-8 py-12 md:py-24">
@@ -220,7 +220,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-br from-primary to-primary-container dark:from-[#423431] dark:to-[#322522] text-on-primary dark:text-[#f2e8df] px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:shadow-primary/20 transition-all disabled:opacity-60"
+                className="w-full bg-button text-on-button hover:bg-button-hover px-10 py-4 rounded-full text-lg font-bold shadow-xl transition-all disabled:opacity-60"
               >
                 {isSubmitting ? "Входим…" : "Войти"}
               </button>
@@ -237,10 +237,7 @@ export default function LoginPage() {
           <aside className="relative overflow-hidden rounded-xl bg-primary dark:bg-[#423431] text-on-primary dark:text-[#f2e8df] p-10 md:p-12 shadow-2xl border border-transparent dark:border-[#8c7a72]/30">
             <div className="absolute -top-24 -right-24 w-96 h-96 bg-tertiary-fixed opacity-20 blur-3xl rounded-full" />
             <div className="relative">
-              <span className="material-symbols-outlined text-tertiary-fixed dark:text-[#ffba38] text-5xl">
-                verified_user
-              </span>
-              <h2 className="font-headline text-3xl font-bold mt-6">
+              <h2 className="font-headline text-3xl font-bold">
                 Доступ к подписке и инструкциям
               </h2>
               <p className="mt-4 text-on-primary-container dark:text-[#c4b8b0]">
@@ -249,25 +246,15 @@ export default function LoginPage() {
               </p>
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-black/10 dark:bg-black/25 rounded-xl p-5">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-tertiary-fixed dark:text-[#ffba38]">
-                      bolt
-                    </span>
-                    <div className="font-bold">Быстрый старт</div>
-                  </div>
+                  <div className="font-bold">Быстрый старт</div>
                   <div className="mt-2 text-sm text-on-primary-container dark:text-[#c4b8b0]">
                     Подключение за 2 минуты.
                   </div>
                 </div>
                 <div className="bg-black/10 dark:bg-black/25 rounded-xl p-5">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-tertiary-fixed dark:text-[#ffba38]">
-                      lock
-                    </span>
-                    <div className="font-bold">Безопасно</div>
-                  </div>
+                  <div className="font-bold">Безопасно</div>
                   <div className="mt-2 text-sm text-on-primary-container dark:text-[#c4b8b0]">
-                    Никаких логов и лишних данных.
+                    Защищённое шифрованное соединение.
                   </div>
                 </div>
               </div>

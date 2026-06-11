@@ -463,7 +463,7 @@ export default function ProfilePage() {
               type="button"
               onClick={() => void verifyPendingPayment(true)}
               disabled={isVerifyingPayment}
-              className="shrink-0 w-full sm:w-auto px-6 py-3 rounded-full font-bold bg-tertiary-fixed text-on-tertiary-fixed hover:brightness-95 disabled:opacity-60 transition-all"
+              className="shrink-0 w-full sm:w-auto px-6 py-3 rounded-full font-bold bg-button text-on-button hover:bg-button-hover disabled:opacity-60 transition-all"
             >
               {isVerifyingPayment ? "Проверка..." : "Проверить оплату"}
             </button>
@@ -477,7 +477,7 @@ export default function ProfilePage() {
             <p className="text-on-surface-variant max-w-md">Управляйте подпиской, следите за сроком действия и копируйте ссылку для подключения в приложении.</p>
           </div>
           <button
-            className="w-full sm:w-auto bg-tertiary-fixed text-on-tertiary-fixed px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-sm"
+            className="w-full sm:w-auto bg-button text-on-button px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-button-hover transition-all shadow-sm"
             type="button"
             onClick={() => setIsAddKeyOpen(true)}
           >
@@ -504,7 +504,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 pt-2 w-full sm:w-auto">
                     <button
-                      className="bg-tertiary-fixed text-on-tertiary-fixed px-8 py-3 rounded-full font-bold hover:brightness-95 transition-all shadow-sm"
+                      className="bg-button text-on-button px-8 py-3 rounded-full font-bold hover:bg-button-hover transition-all shadow-sm"
                       onClick={() => setIsAddKeyOpen(true)}
                       type="button"
                     >
@@ -576,7 +576,7 @@ export default function ProfilePage() {
                               rows={3}
                               onFocus={(e) => e.target.select()}
                               onClick={(e) => e.currentTarget.select()}
-                              className="w-full rounded-xl border border-outline-variant/25 dark:border-[#8c7a72]/50 bg-surface-container dark:bg-[#423431] px-4 py-3 pr-12 text-sm font-mono text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"
+                              className="w-full rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#423431] px-4 py-3 pr-12 text-sm font-mono text-primary dark:text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-[#B09080]/30 dark:focus:ring-tertiary-fixed/40"
                             />
                             <button
                               type="button"
@@ -590,7 +590,7 @@ export default function ProfilePage() {
                           <button
                             type="button"
                             onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
-                            className="w-full bg-tertiary-fixed text-on-tertiary-fixed py-3.5 md:py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all"
+                            className="w-full bg-button text-on-button py-3.5 md:py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-button-hover transition-all"
                           >
                             <span className="material-symbols-outlined">content_copy</span>
                             Скопировать ссылку подписки
@@ -716,7 +716,7 @@ export default function ProfilePage() {
                 type="button"
                 onClick={payForSubscription}
                 disabled={isPaying}
-                className="flex-[1.4_1_0%] bg-green-600 hover:bg-green-700 text-white py-2.5 md:py-4 px-4 rounded-full font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-60"
+                className="flex-[1.4_1_0%] bg-button hover:bg-button-hover text-on-button py-2.5 md:py-4 px-4 rounded-full font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-60"
               >
                 <img src="/sbp.png" alt="СБП" className="h-6 md:h-8 w-auto object-contain" />
                 {isPaying ? "Переход..." : "Оплатить!"}
@@ -731,7 +731,7 @@ export default function ProfilePage() {
 
       {copyToast ? (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[130]">
-          <div className="bg-primary text-on-primary px-5 py-3 rounded-full shadow-2xl font-bold text-sm">
+          <div className="bg-button text-on-button px-5 py-3 rounded-full shadow-2xl font-bold text-sm">
             {copyToast}
           </div>
         </div>

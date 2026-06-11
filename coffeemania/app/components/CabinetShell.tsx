@@ -84,7 +84,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
               <button
                 onClick={() => void handleLogout()}
                 type="button"
-                className="hidden md:inline-flex bg-primary-container text-white hover:bg-error-container hover:text-white hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300"
+                className="hidden md:inline-flex bg-primary-container text-on-primary hover:bg-error-container hover:text-on-primary hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300"
               >
                 Выйти
               </button>
@@ -116,7 +116,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
                 <button
                   onClick={() => void handleLogout()}
                   type="button"
-                  className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-white font-bold"
+                  className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-on-primary font-bold"
                 >
                   Выйти
                 </button>
@@ -143,7 +143,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <footer className="md:ml-64 w-full md:w-[calc(100%-16rem)] py-12 px-8 flex flex-col items-center gap-6 border-t border-[#DDD0C8] dark:border-[#423431] bg-[#EDE0D8] dark:bg-[#1a1110] mt-auto">
+      <footer className="md:ml-64 w-full md:w-[calc(100%-16rem)] py-12 px-8 flex flex-col items-center gap-6 border-t border-[#DDD0C8] dark:border-[#423431] bg-[#EDE0D8] dark:bg-[#1A1110] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
           <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
           <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>

@@ -151,7 +151,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-primary text-on-primary py-3 rounded-full font-bold hover:brightness-95 transition-all disabled:opacity-60"
+              className="w-full bg-button text-on-button hover:bg-button-hover py-3 rounded-full font-bold transition-all disabled:opacity-60"
             >
               {isSubmitting ? "Вход..." : "Войти"}
             </button>

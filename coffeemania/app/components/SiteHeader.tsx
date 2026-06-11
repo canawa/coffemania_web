@@ -7,8 +7,8 @@ import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
 type HeaderTab = "home" | "prices";
 
-export default function SiteHeader(props: { activeTab?: HeaderTab }) {
-  const { activeTab } = props;
+export default function SiteHeader(props: { activeTab?: HeaderTab; logoClassName?: string }) {
+  const { activeTab, logoClassName = "dark:brightness-0 dark:invert" } = props;
   const router = useRouter();
   const [isCheckingCabinet, setIsCheckingCabinet] = useState(false);
 
@@ -37,11 +37,15 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
     }`;
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#EDE0D8] dark:bg-[#1b1c1a] border-none shadow-none">
+    <nav className="sticky top-0 z-50 bg-[#EDE0D8] dark:bg-[#1a1110] border-none shadow-none">
       <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 sm:gap-3 w-full px-3 md:px-8 py-2.5 md:py-4 max-w-7xl mx-auto">
         <Link href="/" className="flex items-center gap-2 min-w-0">
-          <img src="/logo.svg" alt="Логотип" className="w-8 h-8 object-contain" />
-          <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#ffffff] whitespace-nowrap">
+          <img
+            src="/logo.svg"
+            alt="Логотип"
+            className={`w-8 h-8 object-contain ${logoClassName}`.trim()}
+          />
+          <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#f2e8df] whitespace-nowrap">
             <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
             <span className="hidden sm:inline"> ВПН</span>
           </div>
@@ -55,7 +59,7 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
           </Link>
         </div>
         <button
-          className="ml-auto sm:ml-0 shrink-0 bg-primary text-on-primary px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+          className="ml-auto sm:ml-0 shrink-0 bg-button text-on-button px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
           onClick={handleCabinetClick}
           disabled={isCheckingCabinet}
           type="button"
@@ -63,7 +67,7 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
           {isCheckingCabinet ? "Проверяем..." : "Личный кабинет"}
         </button>
       </div>
-      <div className="bg-surface-container dark:bg-[#2a2a28] h-px w-full" />
+      <div className="bg-[#DDD0C8] dark:bg-[#423431] h-px w-full" />
     </nav>
   );
 }

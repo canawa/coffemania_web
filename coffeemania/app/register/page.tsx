@@ -123,14 +123,14 @@ export default function RegisterPage() {
             </Link>
             <ThemeToggle isDark={isDark} onChange={setTheme} />
             <Link
-              className="shrink-0 bg-primary dark:bg-[#423431] text-on-primary dark:text-[#f2e8df] px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
+              className="shrink-0 bg-button text-on-button px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
               href="/register"
             >
               Регистрация
             </Link>
           </div>
         </div>
-        <div className="bg-surface-container dark:bg-[#423431] h-px w-full" />
+        <div className="bg-[#DDD0C8] dark:bg-[#423431] h-px w-full" />
       </nav>
 
       <main className="px-4 md:px-8 py-12 md:py-24">
@@ -235,7 +235,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-br from-primary to-primary-container dark:from-[#423431] dark:to-[#322522] text-on-primary dark:text-[#f2e8df] px-10 py-4 rounded-full text-lg font-bold shadow-xl hover:shadow-primary/20 transition-all disabled:opacity-60"
+                className="w-full bg-button text-on-button hover:bg-button-hover px-10 py-4 rounded-full text-lg font-bold shadow-xl transition-all disabled:opacity-60"
               >
                 {isSubmitting ? "Регистрируем…" : "Зарегистрироваться"}
               </button>

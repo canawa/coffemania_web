@@ -44,7 +44,7 @@ export default function HelpContent() {
         <div className="rounded-xl bg-surface-container-low p-5">
           <h2 className="text-lg font-bold text-primary">Куда писать, если нужна помощь?</h2>
           <p className="mt-2">
-            Telegram: <span className="font-bold text-primary">@CoffemaniaSupport</span> или
+            Telegram: <span className="font-bold text-primary">@coffeemaniasup2</span> или
             страница «Поддержка».
           </p>
         </div>
