@@ -32,17 +32,17 @@ export default function SiteHeader(props: { activeTab?: HeaderTab }) {
   const tabClass = (tab: HeaderTab) =>
     `pb-1 transition-colors duration-300 border-b-2 ${
       activeTab === tab
-        ? "text-[#271310] dark:text-[#ffba38] font-bold border-[#ffba38]"
-        : "text-[#504442] dark:text-[#efeeea] border-transparent hover:text-[#271310] dark:hover:text-[#ffba38]"
+        ? "text-[#3D1C1C] dark:text-[#ffba38] font-bold border-[#3D1C1C] dark:border-[#ffba38]"
+        : "text-[#B09080] dark:text-[#efeeea] border-transparent hover:text-[#3D1C1C] dark:hover:text-[#ffba38]"
     }`;
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a] border-none shadow-none">
+    <nav className="sticky top-0 z-50 bg-[#EDE0D8] dark:bg-[#1b1c1a] border-none shadow-none">
       <div className="flex flex-wrap sm:flex-nowrap justify-between items-center gap-2 sm:gap-3 w-full px-3 md:px-8 py-2.5 md:py-4 max-w-7xl mx-auto">
         <Link href="/" className="flex items-center gap-2 min-w-0">
           <img src="/logo.svg" alt="Логотип" className="w-8 h-8 object-contain" />
-          <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-            <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+          <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#ffffff] whitespace-nowrap">
+            <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
             <span className="hidden sm:inline"> ВПН</span>
           </div>
         </Link>

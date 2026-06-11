@@ -94,27 +94,27 @@ export default function LoginPage() {
 
   return (
     <div className="flex-1 bg-surface text-on-surface selection:bg-tertiary-fixed">
-      <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1a1110] border-none shadow-none">
+      <nav className="sticky top-0 z-50 bg-[#EDE0D8] dark:bg-[#1a1110] border-none shadow-none">
         <div className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-3 md:px-8 py-2.5 md:py-4 max-w-7xl mx-auto">
           <Link
-            className="flex items-center gap-2 text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#f2e8df] min-w-0"
+            className="flex items-center gap-2 text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#f2e8df] min-w-0"
             href="/"
           >
             <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain dark:brightness-0 dark:invert" />
             <div>
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+              <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
               <span className="hidden sm:inline"> ВПН</span>
             </div>
           </Link>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <Link
-              className="hidden sm:inline text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors duration-300"
+              className="hidden sm:inline text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors duration-300"
               href="/#prices"
             >
               Цены
             </Link>
             <Link
-              className="hidden sm:inline text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors duration-300"
+              className="hidden sm:inline text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors duration-300"
               href="/register"
             >
               Регистрация

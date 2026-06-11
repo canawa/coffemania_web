@@ -116,12 +116,12 @@ export default function ReferralPage() {
 
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a]">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-[#EDE0D8] dark:bg-[#1b1c1a]">
         <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-3 md:px-8 py-2.5 md:py-4">
           <div className="flex items-center gap-2 min-w-0">
             <img src="/logo.svg" alt="Логотип" className="w-8 h-8 object-contain" />
-            <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+            <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#ffffff] whitespace-nowrap">
+              <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
               <span className="hidden sm:inline"> ВПН</span>
             </div>
           </div>
@@ -132,20 +132,20 @@ export default function ReferralPage() {
             Назад в кабинет
           </Link>
         </nav>
-        <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full" />
+        <div className="bg-[#DDD0C8] dark:bg-[#2a2a28] h-px w-full" />
       </header>
 
-      <aside className="fixed left-0 top-0 h-full hidden md:flex flex-col p-6 z-40 bg-[#efeeea] dark:bg-[#2a2a28] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)] pt-24">
+      <aside className="fixed left-0 top-0 h-full hidden md:flex flex-col p-6 z-40 bg-[#DDD0C8] dark:bg-[#2a2a28] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)] pt-24">
         <nav className="flex flex-col gap-2">
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/profile">
+          <a className="text-[#B09080] dark:text-[#DDD0C8] px-4 py-3 flex items-center gap-3 hover:bg-[#EDE0D8] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/profile">
             <span className="material-symbols-outlined">vpn_key</span>
             <span className="font-label">Моя подписка</span>
           </a>
-          <a className="bg-[#e6e0c9] dark:bg-[#3e2723] text-[#271310] dark:text-[#ffba38] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200" href="/referral">
+          <a className="bg-[#C8B8A8] dark:bg-[#3e2723] text-[#3D1C1C] dark:text-[#ffba38] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200" href="/referral">
             <span className="material-symbols-outlined">redeem</span>
             <span className="font-label">Реферальная программа</span>
           </a>
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
+          <a className="text-[#B09080] dark:text-[#DDD0C8] px-4 py-3 flex items-center gap-3 hover:bg-[#EDE0D8] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
             <span className="material-symbols-outlined">help</span>
             <span className="font-label">Помощь</span>
           </a>
@@ -243,14 +243,14 @@ export default function ReferralPage() {
         </section>
       </main>
 
-      <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#2a2a28] bg-[#fbf9f5] dark:bg-[#1b1c1a] mt-auto">
+      <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#DDD0C8] dark:border-[#2a2a28] bg-[#EDE0D8] dark:bg-[#1b1c1a] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
+          <a className="text-[#B09080] dark:text-[#DDD0C8]/60 hover:text-[#3D1C1C] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
+          <a className="text-[#B09080] dark:text-[#DDD0C8]/60 hover:text-[#3D1C1C] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
+          <a className="text-[#B09080] dark:text-[#DDD0C8]/60 hover:text-[#3D1C1C] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
+          <a className="text-[#B09080] dark:text-[#DDD0C8]/60 hover:text-[#3D1C1C] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
         </div>
-        <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
+        <p className="text-[#B09080] dark:text-[#DDD0C8]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
       </footer>
     </div>
   );

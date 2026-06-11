@@ -35,26 +35,26 @@ export default function Home() {
   };
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-full">
-      <nav className="sticky top-0 z-50 bg-[#fbf9f5] dark:bg-[#1a1110] border-none shadow-none">
+      <nav className="sticky top-0 z-50 bg-[#EDE0D8] dark:bg-[#1a1110] border-none shadow-none">
         <div className="flex flex-wrap sm:flex-nowrap md:grid md:grid-cols-3 items-center gap-2 sm:gap-3 w-full px-3 md:px-8 py-2.5 md:py-4 max-w-7xl mx-auto">
           <div className="flex items-center gap-2 min-w-0 md:justify-self-start">
             <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain dark:brightness-0 dark:invert" />
-            <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#f2e8df] whitespace-nowrap">
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+            <div className="text-xs sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#f2e8df] whitespace-nowrap">
+              <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
               <span className="hidden sm:inline"> ВПН</span>
             </div>
           </div>
           <div className="hidden md:flex gap-8 items-center justify-center md:justify-self-center">
             <a
               onClick={() => setActiveTab('home')}
-              className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'home' ? 'text-[#271310] dark:text-[#ffba38] font-bold border-[#ffba38]' : 'text-[#504442] dark:text-[#8c7a72] border-transparent hover:text-[#271310] dark:hover:text-[#f2e8df]'}`}
+              className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'home' ? 'text-[#3D1C1C] dark:text-[#ffba38] font-bold border-[#3D1C1C] dark:border-[#ffba38]' : 'text-[#B09080] dark:text-[#8c7a72] border-transparent hover:text-[#3D1C1C] dark:hover:text-[#f2e8df]'}`}
               href="#"
             >
               Главная
             </a>
             <a
               onClick={() => setActiveTab('prices')}
-              className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'prices' ? 'text-[#271310] dark:text-[#ffba38] font-bold border-[#ffba38]' : 'text-[#504442] dark:text-[#8c7a72] border-transparent hover:text-[#271310] dark:hover:text-[#f2e8df]'}`}
+              className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'prices' ? 'text-[#3D1C1C] dark:text-[#ffba38] font-bold border-[#3D1C1C] dark:border-[#ffba38]' : 'text-[#B09080] dark:text-[#8c7a72] border-transparent hover:text-[#3D1C1C] dark:hover:text-[#f2e8df]'}`}
               href="#prices"
             >
               Цены
@@ -376,35 +376,35 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="bg-[#fbf9f5] dark:bg-[#1a1110] border-t border-[#efeeea] dark:border-[#423431]">
+      <footer className="bg-[#EDE0D8] dark:bg-[#1a1110] border-t border-[#DDD0C8] dark:border-[#423431]">
         <div className="w-full py-10 md:py-12 px-4 md:px-8 flex flex-col items-center gap-6 max-w-7xl mx-auto">
           <div className="flex flex-wrap justify-center gap-8 md:gap-16">
             <a
-              className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
+              className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
               href="/about"
             >
               О нас
             </a>
             <a
-              className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
+              className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
               href="/privacy"
             >
               Политика конфиденциальности
             </a>
             <a
-              className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
+              className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
               href="/terms"
             >
               Условия использования
             </a>
             <a
-              className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
+              className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] transition-colors font-body text-sm uppercase tracking-widest"
               href="/support"
             >
               Поддержка
             </a>
           </div>
-          <div className="text-[#504442] dark:text-[#8c7a72] font-body text-sm uppercase tracking-widest text-center mt-4">
+          <div className="text-[#B09080] dark:text-[#8c7a72] font-body text-sm uppercase tracking-widest text-center mt-4">
             © Coffee Mania VPN.
           </div>
         </div>

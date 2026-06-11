@@ -34,8 +34,8 @@ function useClickOutside(
 
 function navItemClass(active: boolean) {
   return active
-    ? "bg-[#e6e0c9] dark:bg-[#423431] text-[#271310] dark:text-[#f2e8df] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200"
-    : "text-[#504442] dark:text-[#8c7a72] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#423431]/50 rounded-full transition-all";
+    ? "bg-[#C8B8A8] dark:bg-[#423431] text-[#3D1C1C] dark:text-[#f2e8df] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200"
+    : "text-[#B09080] dark:text-[#8c7a72] px-4 py-3 flex items-center gap-3 hover:bg-[#EDE0D8] dark:hover:bg-[#423431]/50 rounded-full transition-all";
 }
 
 export default function CabinetShell({ children }: { children: ReactNode }) {
@@ -70,12 +70,12 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col overflow-x-hidden">
       <div className="fixed top-0 left-0 right-0 z-[70]">
-        <header className="relative bg-[#fbf9f5] dark:bg-[#1a1110]">
+        <header className="relative bg-[#EDE0D8] dark:bg-[#1a1110]">
           <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-4 md:px-8 py-3 md:py-4">
             <div className="flex items-center gap-2 min-w-0">
               <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain dark:brightness-0 dark:invert" />
-              <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#f2e8df] whitespace-nowrap">
-                <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+              <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#3D1C1C] dark:text-[#f2e8df] whitespace-nowrap">
+                <span className="bg-[#C8B8A8] dark:bg-orange-300 px-1 text-[#3D1C1C]">КОФЕМАНИЯ</span>
                 <span className="hidden sm:inline"> ВПН</span>
               </div>
             </div>
@@ -99,7 +99,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
               </button>
             </div>
           </nav>
-          <div className="bg-[#efeeea] dark:bg-[#423431] h-px w-full" />
+          <div className="bg-[#DDD0C8] dark:bg-[#423431] h-px w-full" />
           {isMobileMenuOpen ? (
             <div
               className="md:hidden absolute right-3 top-[calc(100%+8px)] z-[60]"
@@ -126,7 +126,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
         </header>
       </div>
 
-      <aside className="fixed left-0 top-24 bottom-0 hidden md:flex flex-col p-6 z-40 bg-[#efeeea] dark:bg-[#2b1f1d] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)]">
+      <aside className="fixed left-0 top-24 bottom-0 hidden md:flex flex-col p-6 z-40 bg-[#DDD0C8] dark:bg-[#2b1f1d] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)]">
         <nav className="flex flex-col gap-2">
           <Link href="/profile" className={navItemClass(isSubscription)}>
             <span className="material-symbols-outlined">vpn_key</span>
@@ -143,14 +143,14 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
         {children}
       </main>
 
-      <footer className="md:ml-64 w-full md:w-[calc(100%-16rem)] py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#423431] bg-[#fbf9f5] dark:bg-[#1a1110] mt-auto">
+      <footer className="md:ml-64 w-full md:w-[calc(100%-16rem)] py-12 px-8 flex flex-col items-center gap-6 border-t border-[#DDD0C8] dark:border-[#423431] bg-[#EDE0D8] dark:bg-[#1a1110] mt-auto">
         <div className="flex flex-wrap justify-center gap-8">
-          <a className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
-          <a className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
-          <a className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
-          <a className="text-[#504442] dark:text-[#8c7a72] hover:text-[#271310] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
+          <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
+          <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
+          <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
+          <a className="text-[#B09080] dark:text-[#8c7a72] hover:text-[#3D1C1C] dark:hover:text-[#f2e8df] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
         </div>
-        <p className="text-[#504442] dark:text-[#8c7a72] text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
+        <p className="text-[#B09080] dark:text-[#8c7a72] text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
       </footer>
     </div>
   );
