@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "КОФЕМАНИЯ ВПН",
     short_name: "КОФЕМАНИЯ ВПН",
     description:
-      "Быстрый и удобный VPN-сервис: регистрация, пополнение баланса, покупка ключей и подключение за пару минут.",
+      "Быстрый и удобный VPN-сервис: регистрация, оплата подписки и подключение за пару минут.",
     start_url: "/",
     display: "standalone",
     background_color: "#fbf9f5",

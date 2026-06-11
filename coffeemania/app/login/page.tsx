@@ -131,7 +131,7 @@ export default function LoginPage() {
               Вход в личный кабинет
             </h1>
             <p className="mt-4 text-on-surface-variant">
-              Введите данные доступа. Если у вас ещё нет ключа — выберите тариф и
+              Введите данные доступа. Если у вас ещё нет подписки — выберите тариф и
               получите доступ за минуту.
             </p>
 
@@ -234,11 +234,11 @@ export default function LoginPage() {
                 verified_user
               </span>
               <h2 className="font-headline text-3xl font-bold mt-6">
-                Доступ к ключам и инструкциям
+                Доступ к подписке и инструкциям
               </h2>
               <p className="mt-4 text-on-primary-container">
-                После входа вы сможете посмотреть свой ключ, статус подписки и
-                быстрые инструкции по подключению.
+                После входа вы сможете управлять подпиской, проверять её статус и
+                открывать быстрые инструкции по подключению.
               </p>
               <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-black/10 rounded-xl p-5">

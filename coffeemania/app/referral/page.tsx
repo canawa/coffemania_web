@@ -139,7 +139,7 @@ export default function ReferralPage() {
         <nav className="flex flex-col gap-2">
           <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/profile">
             <span className="material-symbols-outlined">vpn_key</span>
-            <span className="font-label">Мои ключи</span>
+            <span className="font-label">Моя подписка</span>
           </a>
           <a className="bg-[#e6e0c9] dark:bg-[#3e2723] text-[#271310] dark:text-[#ffba38] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200" href="/referral">
             <span className="material-symbols-outlined">redeem</span>

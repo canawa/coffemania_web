@@ -9,6 +9,9 @@ class User(BaseModel):
 class PaymentRequest(BaseModel):
     amount: int
     promo_code: Optional[str] = None
+    purpose: str = "subscription"
+    subscription_id: Optional[int] = None
+    duration_days: int = 30
 
 class VpnConfiguration(BaseModel):
     duration: int

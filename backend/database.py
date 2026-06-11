@@ -73,10 +73,27 @@ def create_tables():
         existing_cols = {row[1] for row in cursor.fetchall()}
         if "promo_code" not in existing_cols:
             cursor.execute("ALTER TABLE transactions ADD COLUMN promo_code TEXT")
+        if "fulfilled" not in existing_cols:
+            cursor.execute(
+                "ALTER TABLE transactions ADD COLUMN fulfilled BOOLEAN NOT NULL DEFAULT 0"
+            )
 
         cursor.execute("PRAGMA table_info(vpn_keys)")
         vpn_cols = {row[1] for row in cursor.fetchall()}
         if "vpn_username" not in vpn_cols:
             cursor.execute("ALTER TABLE vpn_keys ADD COLUMN vpn_username TEXT")
+
+        cursor.execute("PRAGMA table_info(payment_contexts)")
+        payment_ctx_cols = {row[1] for row in cursor.fetchall()}
+        if "purpose" not in payment_ctx_cols:
+            cursor.execute(
+                "ALTER TABLE payment_contexts ADD COLUMN purpose TEXT NOT NULL DEFAULT 'subscription'"
+            )
+        if "subscription_id" not in payment_ctx_cols:
+            cursor.execute("ALTER TABLE payment_contexts ADD COLUMN subscription_id INTEGER")
+        if "duration_days" not in payment_ctx_cols:
+            cursor.execute(
+                "ALTER TABLE payment_contexts ADD COLUMN duration_days INTEGER NOT NULL DEFAULT 30"
+            )
 
         con.commit()

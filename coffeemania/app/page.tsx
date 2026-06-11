@@ -84,7 +84,7 @@ export default function Home() {
                 VPN по цене чашки кофе
               </h1>
               <p className="text-on-surface-variant text-lg md:text-xl mb-10 max-w-md leading-relaxed">
-                Надежное VLESS-шифрование с авторской скоростью. Ключи для серверов по всему миру.
+                Передовые протоколы безопасности и стабильная скорость. Подписка на серверы по всему миру.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <a
@@ -138,18 +138,24 @@ export default function Home() {
                     security
                   </span>
                   <h3 className="font-headline text-2xl font-bold mb-4">
-                    VLESS
+                    Передовые протоколы безопасности
                   </h3>
                   <p className="text-on-surface-variant leading-relaxed mb-6">
-                    Наши сервера используют VLESS протокол для шифрования данных. Это позволяет нам быть незаметными для мониторинга и поддерживать нулевую задержку.
+                    Трафик защищён современным шифрованием и надёжными транспортными протоколами —
+                    соединение остаётся стабильным, а ваши данные недоступны посторонним.
+                    Мы используем актуальные стандарты безопасности, чтобы вы спокойно работали,
+                    общались и смотрели контент без компромиссов.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className="px-3 py-1 bg-secondary-container rounded-full text-xs font-bold uppercase tracking-widest text-on-secondary-container">
-                    Зашифровано
+                    TLS 1.3
                   </span>
                   <span className="px-3 py-1 bg-secondary-container rounded-full text-xs font-bold uppercase tracking-widest text-on-secondary-container">
-                    Невидимо
+                    Сквозное шифрование
+                  </span>
+                  <span className="px-3 py-1 bg-secondary-container rounded-full text-xs font-bold uppercase tracking-widest text-on-secondary-container">
+                    Защита трафика
                   </span>
                 </div>
               </div>
@@ -222,7 +228,7 @@ export default function Home() {
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
-                  150₽{" "}
+                  1₽{" "}
                   <span className="text-lg font-medium text-on-surface-variant">
                     /мес
                   </span>
@@ -254,23 +260,23 @@ export default function Home() {
 
               <div className="bg-primary text-on-primary p-8 rounded-xl shadow-2xl md:scale-105 z-10 flex flex-col relative overflow-hidden">
                 <div className="absolute top-0 right-0 bg-tertiary-fixed text-on-tertiary-fixed px-6 py-2 rounded-bl-xl font-bold text-xs uppercase tracking-widest">
-                  Лучшее предложение
+                  Скидка 15%
                 </div>
                 <div className="mb-8">
                   <span className="material-symbols-outlined text-tertiary-fixed text-4xl mb-4">
                     coffee
                   </span>
                   <h3 className="font-headline text-2xl font-bold">
-                    Экспертный
+                    Стандартный
                   </h3>
                   <p className="text-on-primary-container text-sm uppercase tracking-widest font-bold mt-1">
-                    12 МЕСЯЦЕВ
+                    3 МЕСЯЦА
                   </p>
                 </div>
                 <div className="text-4xl font-bold mb-8">
-                  1400₽{" "}
+                  399₽{" "}
                   <span className="text-lg font-medium opacity-60">
-                    /год
+                    /3 мес
                   </span>
                 </div>
                 <ul className="space-y-4 mb-10 flex-grow">
@@ -295,26 +301,29 @@ export default function Home() {
                   </li>
                 </ul>
                 <Link href="/register" className="w-full py-4 bg-tertiary-fixed text-on-tertiary-fixed font-bold rounded-full hover:scale-105 transition-transform block text-center">
-                  Выбрать Экспертный
+                  Выбрать Стандартный
                 </Link>
               </div>
 
-              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:translate-y-[-8px] transition-transform duration-300 flex flex-col">
+              <div className="bg-surface-container-lowest p-8 rounded-xl border border-outline-variant/10 hover:translate-y-[-8px] transition-transform duration-300 flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 right-0 bg-tertiary-fixed text-on-tertiary-fixed px-6 py-2 rounded-bl-xl font-bold text-xs uppercase tracking-widest">
+                  Скидка 50%
+                </div>
                 <div className="mb-8">
                   <span className="material-symbols-outlined text-tertiary-container text-4xl mb-4">
                     energy_savings_leaf
                   </span>
                   <h3 className="font-headline text-2xl font-bold text-primary">
-                    Стандартный
+                    Экспертный
                   </h3>
                   <p className="text-on-surface-variant text-sm uppercase tracking-widest font-bold mt-1">
-                    6 МЕСЯЦЕВ
+                    12 МЕСЯЦЕВ
                   </p>
                 </div>
                 <div className="text-4xl font-bold text-primary mb-8">
-                  600₽{" "}
+                  899₽{" "}
                   <span className="text-lg font-medium text-on-surface-variant">
-                    /полгода
+                    /год
                   </span>
                 </div>
                 <ul className="space-y-4 mb-10 flex-grow">
@@ -339,7 +348,7 @@ export default function Home() {
 
                 </ul>
                 <Link href="/register" className="w-full py-4 border border-primary text-primary font-bold rounded-full hover:bg-primary hover:text-on-primary transition-colors block text-center">
-                  Выбрать Стандартный
+                  Выбрать Экспертный
                 </Link>
               </div>
             </div>
@@ -367,7 +376,7 @@ export default function Home() {
                 ароматным VPN-сервисом в мире.
               </p>
               <Link href='/register' className="inline-flex w-full sm:w-auto justify-center bg-tertiary-fixed text-on-tertiary-fixed px-8 md:px-12 py-4 md:py-5 rounded-full text-lg md:text-xl font-bold shadow-xl hover:scale-105 active:scale-95 transition-all">
-                Получить ключ сейчас
+                Оформить подписку
               </Link>
             </div>
           </div>

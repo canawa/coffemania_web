@@ -1,16 +1,62 @@
 "use client";
 import Link from "next/link";
-import React, { useEffect, useId, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { PROFILE_ROUTE_REFRESH } from "@/app/components/ProfileRouteRefresh";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
+import { FlagBadge, VPN_LOCATIONS } from "@/app/components/CountryFlags";
+import {
+  getPlanById,
+  SUBSCRIPTION_PLANS,
+  type SubscriptionPlanId,
+} from "@/lib/subscriptionPlans";
+
+const PENDING_PAYMENT_ID_KEY = "pending_payment_id";
+const PENDING_PAYMENT_STARTED_KEY = "pending_payment_started_at";
+const PAYMENT_VERIFY_WINDOW_MS = 15 * 60 * 1000;
+
+function clearPendingPayment() {
+  localStorage.removeItem(PENDING_PAYMENT_ID_KEY);
+  localStorage.removeItem(PENDING_PAYMENT_STARTED_KEY);
+}
+
+function getPendingPaymentDeadline(): number | null {
+  const paymentId = localStorage.getItem(PENDING_PAYMENT_ID_KEY);
+  const startedRaw = localStorage.getItem(PENDING_PAYMENT_STARTED_KEY);
+  if (!paymentId || !startedRaw) {
+    if (paymentId) clearPendingPayment();
+    return null;
+  }
+  const startedAt = Number(startedRaw);
+  if (!Number.isFinite(startedAt)) {
+    clearPendingPayment();
+    return null;
+  }
+  return startedAt + PAYMENT_VERIFY_WINDOW_MS;
+}
+
+function isPendingPaymentActive(): boolean {
+  const deadline = getPendingPaymentDeadline();
+  if (!deadline) return false;
+  if (Date.now() > deadline) {
+    clearPendingPayment();
+    return false;
+  }
+  return true;
+}
+
+function markPendingPayment(paymentId: string) {
+  localStorage.setItem(PENDING_PAYMENT_ID_KEY, paymentId);
+  localStorage.setItem(PENDING_PAYMENT_STARTED_KEY, String(Date.now()));
+}
+
 export default function ProfilePage() {
-  const [isTopUpOpen, setIsTopUpOpen] = useState(false); // модалка
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement | null>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
-  const [topUpAmount, setTopUpAmount] = useState('500'); // сумма пополнения
-  const [balance, setBalance] = useState(0)
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
-  const [isBuyingKey, setIsBuyingKey] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<{
     id?: number;
@@ -19,101 +65,25 @@ export default function ProfilePage() {
     expires_at?: string | null;
   }>({ active: false, subscription_url: null });
   const [copyToast, setCopyToast] = useState<string | null>(null);
-  const [promoCode, setPromoCode] = useState("");
-  const [ownReferralCode, setOwnReferralCode] = useState<string | null>(null);
-  const [promoBonusHint, setPromoBonusHint] = useState<"none" | "valid" | "own">("none");
+  const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanId>("1m");
+  const selectedPlan = getPlanById(selectedPlanId);
+  const [paymentVerifyState, setPaymentVerifyState] = useState<"idle" | "pending" | "error">("idle");
+  const [paymentVerifyMessage, setPaymentVerifyMessage] = useState<string | null>(null);
+  const [paymentVerifyVisible, setPaymentVerifyVisible] = useState(false);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const paymentPollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const paymentHideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [vpnKeys, setVpnKeys] = useState<
     Array<{
       id: number;
       country: string;
       duration: number;
       vpn_key: string;
+      vpn_username?: string | null;
       created_at: string;
       expires_at: string | null;
     }>
   >([]);
-
-  const subscriptionPlan = {
-    country: "germany1",
-    durationDays: 30,
-    total: 149,
-  } as const;
-
-  const FlagSvg = ({ name }: { name: "germany" | "austria" | "russia" }) => {
-    const common = {
-      width: 22,
-      height: 16,
-      viewBox: "0 0 22 16",
-      xmlns: "http://www.w3.org/2000/svg",
-    } as const;
-
-    const Clip = () => (
-      <defs>
-        <clipPath id={`flag-clip-${name}`}>
-          <rect x="0" y="0" width="22" height="16" rx="2" ry="2" />
-        </clipPath>
-      </defs>
-    );
-
-    if (name === "germany") {
-      return (
-        <svg {...common} aria-hidden="true" focusable="false">
-          <Clip />
-          <g clipPath={`url(#flag-clip-${name})`}>
-            <rect width="22" height="16" fill="#000000" />
-            <rect y="5.333" width="22" height="5.333" fill="#DD0000" />
-            <rect y="10.666" width="22" height="5.334" fill="#FFCE00" />
-          </g>
-        </svg>
-      );
-    }
-
-    if (name === "austria") {
-      return (
-        <svg {...common} aria-hidden="true" focusable="false">
-          <Clip />
-          <g clipPath={`url(#flag-clip-${name})`}>
-            <rect width="22" height="16" fill="#ED2939" />
-            <rect y="5.333" width="22" height="5.333" fill="#FFFFFF" />
-          </g>
-        </svg>
-      );
-    }
-
-    return (
-      <svg {...common} aria-hidden="true" focusable="false">
-        <Clip />
-        <g clipPath={`url(#flag-clip-${name})`}>
-          <rect width="22" height="16" fill="#FFFFFF" />
-          <rect y="5.333" width="22" height="5.333" fill="#0039A6" />
-          <rect y="10.666" width="22" height="5.334" fill="#D52B1E" />
-        </g>
-      </svg>
-    );
-  };
-
-  const FlagBadge = ({
-    name,
-    size,
-  }: {
-    name: "germany" | "austria" | "russia";
-    size?: "sm" | "lg";
-  }) => {
-    const cls =
-      size === "lg"
-        ? "w-[28px] h-[20px] rounded-[6px]"
-        : "w-[22px] h-[16px] rounded-[4px]";
-    return (
-      <span
-        className={[
-          cls,
-          "overflow-hidden shadow-[0_1px_0_rgba(0,0,0,0.06)] border border-outline-variant/20 shrink-0 flex items-center justify-center bg-surface",
-        ].join(" ")}
-      >
-        <FlagSvg name={name} />
-      </span>
-    );
-  };
 
   function useClickOutside(
     refs: Array<React.RefObject<HTMLElement | null>>,
@@ -146,55 +116,106 @@ export default function ProfilePage() {
     isMobileMenuOpen,
   );
 
-  const handleLogout = () => {
-    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  const handleLogout = async () => {
+    try {
+      await apiFetch(`${API_BASE_URL}/logout`, {
+        method: "POST",
+        credentials: "include",
+        skip401Redirect: true,
+      });
+    } catch {
+      // ignore network errors — still redirect home
+    }
     window.location.href = "/";
   };
 
-  const yookassaPayment = async (amount: number) => {
-    const normalizedPromo = promoCode.trim().toUpperCase();
-    if (normalizedPromo && ownReferralCode && normalizedPromo === ownReferralCode) {
-      setCopyToast("Нельзя использовать собственный реферальный промокод");
-      setTimeout(() => setCopyToast(null), 2200);
-      return;
-    }
+  const payForSubscription = async () => {
+    setIsPaying(true);
+    setBuyKeyMessage(null);
 
-    const res = await apiFetch(`${API_BASE_URL}/create_payment`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        amount: amount,
-        promo_code: normalizedPromo ? normalizedPromo : null,
-      }),
-    });
-    if (res.status === 401) return;
-    const data = await res.json();
-    if (!res.ok) {
-      setCopyToast(data?.message ?? `Ошибка ${res.status}`);
-      setTimeout(() => setCopyToast(null), 2000);
-      return;
-    }
-    window.open(data.confirmation.confirmation_url, "_blank");
-    const interval = setInterval(async () => {
-      const result = await apiFetch(`${API_BASE_URL}/check_payment?payment_id=${data.id}`, {
-        method: "GET",
+    let redirecting = false;
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+
+      const res = await apiFetch(`${API_BASE_URL}/create_payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         credentials: "include",
+        signal: controller.signal,
+        body: JSON.stringify({
+          amount: selectedPlan.price,
+          duration_days: selectedPlan.days,
+          promo_code: null,
+          purpose: subscription.active ? "renew" : "subscription",
+          subscription_id: subscription.active ? subscription.id ?? null : null,
+        }),
       });
-      if (result.status === 401) {
-        clearInterval(interval);
+
+      window.clearTimeout(timeoutId);
+
+      if (res.status === 401) {
+        const message = "Сессия истекла. Выйдите и войдите снова.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
         return;
       }
-      const result_data = await result.json();
-      if (result_data === true) {
-        clearInterval(interval);
-        const newBalance = await getBalance();
-        setBalance(newBalance);
+
+      let data: {
+        id?: string;
+        message?: string;
+        confirmation?: { confirmation_url?: string };
+        confirmation_url?: string;
+      };
+
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        const message = "Сервер вернул некорректный ответ. Проверьте, что бэкенд запущен.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
       }
-    }, 5000);
-  }
+
+      if (!res.ok) {
+        const message = data?.message ?? `Ошибка ${res.status}`;
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      const paymentId = data.id;
+      const confirmationUrl =
+        data.confirmation?.confirmation_url ?? data.confirmation_url;
+
+      if (!paymentId || !confirmationUrl) {
+        const message = "Не удалось получить ссылку на оплату. Попробуйте ещё раз.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      markPendingPayment(paymentId);
+      redirecting = true;
+      window.location.href = confirmationUrl;
+    } catch (e) {
+      const message =
+        e instanceof Error && e.name === "AbortError"
+          ? "Превышено время ожидания. Проверьте, что бэкенд запущен на порту 8001."
+          : e instanceof Error
+            ? e.message
+            : "Не удалось начать оплату";
+      setBuyKeyMessage(message);
+      setCopyToast(message);
+    } finally {
+      if (!redirecting) {
+        setIsPaying(false);
+      }
+    }
+  };
 
   const getVpnKeys = async () => {
     const res = await apiFetch(`${API_BASE_URL}/vpn_keys`, {
@@ -210,27 +231,31 @@ export default function ProfilePage() {
     return Array.isArray(data) ? (data as typeof vpnKeys) : [];
   };
 
-  const maskKey = (key: string) => {
-    const s = (key ?? "").trim();
-    if (s.length <= 18) return s;
-    return `${s.slice(0, 12)}…${s.slice(-6)}`;
-  };
-
-  const countryLabel = (country: string) => {
-    const labels: Record<string, string> = {
-      germany1: "Германия 1",
-      germany2: "Германия 2",
-      austria: "Австрия",
-      lte_bypass: "ОБХОД LTE",
-    };
-    return labels[country] ?? country;
-  };
-
   const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false; // lifetime
     const ts = Date.parse(expiresAt);
     if (Number.isNaN(ts)) return false;
     return ts <= Date.now();
+  };
+
+  const formatDateTime = (iso: string | null) => {
+    if (!iso) return "—";
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const formatDuration = (days: number) => {
+    if (days >= 365) return "12 месяцев";
+    if (days >= 90) return "3 месяца";
+    if (days >= 30) return "1 месяц";
+    return `${days} дн.`;
   };
 
   const getRemainingLabel = (expiresAt: string | null) => {
@@ -253,82 +278,18 @@ export default function ProfilePage() {
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopyToast("Ключ успешно скопирован");
+      setCopyToast("Ссылка подписки скопирована");
       setTimeout(() => setCopyToast(null), 1800);
     } catch {
-      setCopyToast("Не удалось скопировать ключ");
+      setCopyToast("Не удалось скопировать ссылку подписки");
       setTimeout(() => setCopyToast(null), 1800);
     }
   };
 
-  const buyVpnKey = async () => {
-    setIsBuyingKey(true);
-    setBuyKeyMessage(null);
-
-    try {
-      const endpoint = subscription.active ? `${API_BASE_URL}/renew_vpn` : `${API_BASE_URL}/buy_vpn`;
-      const payload = subscription.active
-        ? {
-            duration: subscriptionPlan.durationDays,
-            subscription_id: subscription.id,
-          }
-        : {
-            country: subscriptionPlan.country,
-            duration: subscriptionPlan.durationDays,
-          };
-
-      const res = await apiFetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify(payload),
-      });
-
-      const contentType = res.headers.get("content-type") ?? "";
-      if (res.status === 401) return;
-      if (!res.ok) {
-        if (contentType.includes("application/json")) {
-          const err = await res.json();
-          setBuyKeyMessage(err?.message ?? `Ошибка ${res.status}`);
-        } else {
-          const text = await res.text();
-          setBuyKeyMessage(text || `Ошибка ${res.status}`);
-        }
-        return;
-      }
-
-      let subscriptionUrl: string | null = null;
-      if (contentType.includes("application/json")) {
-        const data = await res.json();
-        subscriptionUrl = data?.subscription_url ?? null;
-      } else {
-        const text = (await res.text()).trim();
-        subscriptionUrl = text || null;
-      }
-
-      setBuyKeyMessage(
-        subscriptionUrl
-          ? subscription.active
-            ? `Подписка продлена. Ссылка: ${subscriptionUrl}`
-            : `Подписка активирована. Ссылка: ${subscriptionUrl}`
-          : subscription.active
-            ? "Подписка продлена."
-            : "Подписка активирована.",
-      );
-      const newBalance = await getBalance();
-      setBalance(newBalance);
-      const keys = await getVpnKeys();
-      setVpnKeys(keys);
-      const sub = await getSubscription();
-      setSubscription(sub);
-      setIsAddKeyOpen(false);
-    } catch (e) {
-      setBuyKeyMessage(e instanceof Error ? e.message : "Не удалось купить подписку");
-    } finally {
-      setIsBuyingKey(false);
-    }
+  const copySubscriptionLink = async (link: string, fieldId: string) => {
+    const el = document.getElementById(fieldId) as HTMLTextAreaElement | null;
+    el?.select();
+    await copyToClipboard(link);
   };
 
   const getSubscription = async () => {
@@ -353,189 +314,255 @@ export default function ProfilePage() {
     };
   };
 
-  const getBalance = async () => {
-    const res = await apiFetch(`${API_BASE_URL}/balance`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-    });
-    if (res.status === 401) return 0;
-    const data = await res.json();
-    return data;
-  };
-
-  useEffect(() => {
-    const fetchBalance = async () => { // я так понимаю у useEffect своя область видимости, поэтому я создал функцию внутри него
-      let balance = await getBalance();
-      setBalance(balance);
-    }
-    fetchBalance();
-
-    const fetchKeys = async () => {
-      const keys = await getVpnKeys();
-      setVpnKeys(keys);
-    };
-    fetchKeys();
-
-    const fetchSubscription = async () => {
-      const sub = await getSubscription();
-      setSubscription(sub);
-    };
-    fetchSubscription();
-
-    const fetchOwnReferral = async () => {
-      try {
-        const res = await apiFetch(`${API_BASE_URL}/referral`, {
-          method: "GET",
-          credentials: "include",
-        });
-        if (res.status === 401) return;
-        if (!res.ok) return;
-        const data = (await res.json()) as { referral_code?: string | null };
-        const code = data?.referral_code?.trim().toUpperCase() ?? "";
-        setOwnReferralCode(code || null);
-      } catch {
-        setOwnReferralCode(null);
-      }
-    };
-    fetchOwnReferral();
+  const refreshSubscriptionData = useCallback(async () => {
+    const keys = await getVpnKeys();
+    setVpnKeys(keys);
+    const sub = await getSubscription();
+    setSubscription(sub);
   }, []);
 
-  useEffect(() => {
-    if (!isTopUpOpen) {
-      setPromoBonusHint("none");
-      return;
-    }
-    const raw = promoCode.trim();
-    if (!raw) {
-      setPromoBonusHint("none");
-      return;
-    }
-    const t = setTimeout(async () => {
-      try {
-        const res = await apiFetch(
-          `${API_BASE_URL}/promo/validate?code=${encodeURIComponent(raw)}`,
-          { credentials: "include" },
-        );
-        if (res.status === 401) return;
-        if (!res.ok) {
-          setPromoBonusHint("none");
-          return;
-        }
-        const data = (await res.json()) as { valid?: boolean; own_code?: boolean };
-        if (data.own_code) setPromoBonusHint("own");
-        else if (data.valid) setPromoBonusHint("valid");
-        else setPromoBonusHint("none");
-      } catch {
-        setPromoBonusHint("none");
-      }
-    }, 400);
-    return () => clearTimeout(t);
-  }, [promoCode, isTopUpOpen]);
+  const hidePaymentVerify = useCallback(() => {
+    setPaymentVerifyVisible(false);
+    setPaymentVerifyState("idle");
+    setPaymentVerifyMessage(null);
+  }, []);
 
+  const verifyPendingPayment = useCallback(async (manual = false): Promise<boolean> => {
+    if (!isPendingPaymentActive()) {
+      hidePaymentVerify();
+      return false;
+    }
+
+    const pendingId = localStorage.getItem(PENDING_PAYMENT_ID_KEY);
+    if (!pendingId) {
+      hidePaymentVerify();
+      return false;
+    }
+
+    if (manual) setIsVerifyingPayment(true);
+
+    try {
+      const result = await apiFetch(`${API_BASE_URL}/check_payment?payment_id=${pendingId}`, {
+        method: "GET",
+        credentials: "include",
+      });
+      if (result.status === 401) {
+        setPaymentVerifyState("error");
+        setPaymentVerifyMessage("Сессия истекла. Войдите снова и нажмите «Проверить оплату».");
+        return false;
+      }
+
+      const data = (await result.json()) as
+        | { status?: string; message?: string }
+        | boolean;
+
+      if (data === true || (typeof data === "object" && data.status === "success")) {
+        clearPendingPayment();
+        await refreshSubscriptionData();
+        hidePaymentVerify();
+        setCopyToast("Оплата прошла успешно, подписка активирована");
+        setTimeout(() => setCopyToast(null), 3000);
+        return true;
+      }
+
+      if (typeof data === "object" && data.status === "pending") {
+        setPaymentVerifyState("pending");
+        setPaymentVerifyMessage("Ожидаем подтверждение оплаты от банка...");
+        return false;
+      }
+
+      setPaymentVerifyState("error");
+      setPaymentVerifyMessage(
+        typeof data === "object" && data.message
+          ? data.message
+          : "Не удалось подтвердить оплату. Попробуйте ещё раз.",
+      );
+      return false;
+    } catch {
+      setPaymentVerifyState("error");
+      setPaymentVerifyMessage("Ошибка связи с сервером. Проверьте интернет и попробуйте снова.");
+      return false;
+    } finally {
+      if (manual) setIsVerifyingPayment(false);
+    }
+  }, [hidePaymentVerify, refreshSubscriptionData]);
+
+  useEffect(() => {
+    void refreshSubscriptionData();
+
+    const refresh = () => {
+      void refreshSubscriptionData();
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
+    };
+
+    const onPopState = () => {
+      requestAnimationFrame(() => {
+        if (window.location.pathname === "/profile") {
+          refresh();
+        }
+      });
+    };
+
+    window.addEventListener("pageshow", refresh);
+    window.addEventListener("focus", refresh);
+    window.addEventListener("popstate", onPopState);
+    window.addEventListener(PROFILE_ROUTE_REFRESH, refresh);
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      window.removeEventListener("pageshow", refresh);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener("popstate", onPopState);
+      window.removeEventListener(PROFILE_ROUTE_REFRESH, refresh);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [pathname, refreshSubscriptionData]);
+
+  useEffect(() => {
+    if (!isPendingPaymentActive()) {
+      hidePaymentVerify();
+      return;
+    }
+
+    setPaymentVerifyVisible(true);
+    let cancelled = false;
+
+    const scheduleHideAtDeadline = () => {
+      const deadline = getPendingPaymentDeadline();
+      if (!deadline) return;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        clearPendingPayment();
+        hidePaymentVerify();
+        return;
+      }
+      paymentHideRef.current = setTimeout(() => {
+        if (cancelled) return;
+        clearPendingPayment();
+        hidePaymentVerify();
+      }, remaining);
+    };
+
+    const scheduleNext = () => {
+      if (cancelled || !isPendingPaymentActive()) return;
+      paymentPollRef.current = setTimeout(tick, 3000);
+    };
+
+    const tick = async () => {
+      if (cancelled || !isPendingPaymentActive()) {
+        hidePaymentVerify();
+        return;
+      }
+      setPaymentVerifyVisible(true);
+      setPaymentVerifyState("pending");
+      setPaymentVerifyMessage("Ожидаем подтверждение оплаты от банка...");
+      const ok = await verifyPendingPayment();
+      if (ok || cancelled) return;
+      if (isPendingPaymentActive()) {
+        scheduleNext();
+      } else {
+        hidePaymentVerify();
+      }
+    };
+
+    scheduleHideAtDeadline();
+    tick();
+
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      void refreshSubscriptionData();
+      if (isPendingPaymentActive()) {
+        if (paymentPollRef.current) clearTimeout(paymentPollRef.current);
+        tick();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      if (paymentPollRef.current) clearTimeout(paymentPollRef.current);
+      if (paymentHideRef.current) clearTimeout(paymentHideRef.current);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [verifyPendingPayment, hidePaymentVerify, refreshSubscriptionData]);
+
+  const hasPaymentBanner =
+    paymentVerifyVisible &&
+    (paymentVerifyState === "pending" || paymentVerifyState === "error");
 
   return (
     <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
-      {/* TopNavBar */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-[#fbf9f5] dark:bg-[#1b1c1a]">
-        <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-4 md:px-8 py-3 md:py-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
-            <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-              <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
-              <span className="hidden sm:inline"> ВПН</span>
+      <div className="fixed top-0 left-0 right-0 z-[70]">
+        <header className="relative bg-[#fbf9f5] dark:bg-[#1b1c1a]">
+          <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-4 md:px-8 py-3 md:py-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
+              <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
+                <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
+                <span className="hidden sm:inline"> ВПН</span>
+              </div>
             </div>
-          </div>
-          <div className="hidden md:flex items-center gap-8">
-            <div className="flex items-center bg-surface-container-high pl-4 pr-1 py-1 rounded-full">
-              <span className="material-symbols-outlined text-primary text-[20px] mr-2">account_balance_wallet</span>
-              <span className="font-bold text-primary font-mono select-all mr-3">{balance} ₽</span>
-              <button
-                onClick={() => setIsTopUpOpen(true)}
-                className="w-8 h-8 flex items-center justify-center bg-tertiary-fixed text-on-tertiary-fixed rounded-full hover:brightness-105 transition-all shadow-sm shrink-0"
-                title="Пополнить баланс"
-              >
-                <span className="material-symbols-outlined text-[18px]">add</span>
-              </button>
+            <div className="hidden md:flex items-center gap-8">
+              <Link className="text-[#504442] dark:text-[#efeeea] hover:text-[#271310] dark:hover:text-[#ffba38] transition-colors duration-300" href="/guide">Инструкции</Link>
+              <button onClick={handleLogout} className="bg-primary-container text-white hover:bg-error-container hover:text-white hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300">Выйти</button>
             </div>
-            <Link className="text-[#504442] dark:text-[#efeeea] hover:text-[#271310] dark:hover:text-[#ffba38] transition-colors duration-300" href="/guide">Инструкции</Link>
-            <button onClick={handleLogout} className="bg-primary-container text-white hover:bg-error-container hover:text-white hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300">Выйти</button>
-          </div>
-          <button
-            className="md:hidden text-primary"
-            type="button"
-            onClick={() => setIsMobileMenuOpen((v) => !v)}
-            aria-label="Открыть меню"
-            ref={mobileMenuButtonRef}
-          >
-            <span className="material-symbols-outlined">menu</span>
-          </button>
-        </nav>
-        <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full"></div>
-        {isMobileMenuOpen ? (
-          <div
-            className="md:hidden absolute right-3 top-[calc(100%+8px)] z-[60]"
-            ref={mobileMenuRef}
-          >
-            <div className="w-[260px] max-w-[72vw] rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-3 flex flex-col gap-2 shadow-2xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsTopUpOpen(true);
-                  setIsMobileMenuOpen(false);
-                }}
-                className="w-full text-left px-4 py-3 rounded-xl bg-tertiary-fixed text-on-tertiary-fixed font-bold"
-              >
-                Пополнить баланс
-              </button>
-              <Link
-                href="/guide"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
-              >
-                Инструкции
-              </Link>
-              <Link
-                href="/referral"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
-              >
-                Реферальная программа
-              </Link>
-              <Link
-                href="/help"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
-              >
-                Помощь
-              </Link>
-              <button
-                onClick={handleLogout}
-                type="button"
-                className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-white font-bold"
-              >
-                Выйти
-              </button>
+            <button
+              className="md:hidden text-primary"
+              type="button"
+              onClick={() => setIsMobileMenuOpen((v) => !v)}
+              aria-label="Открыть меню"
+              ref={mobileMenuButtonRef}
+            >
+              <span className="material-symbols-outlined">menu</span>
+            </button>
+          </nav>
+          <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full" />
+          {isMobileMenuOpen ? (
+            <div
+              className="md:hidden absolute right-3 top-[calc(100%+8px)] z-[60]"
+              ref={mobileMenuRef}
+            >
+              <div className="w-[260px] max-w-[72vw] rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-3 flex flex-col gap-2 shadow-2xl">
+                <Link
+                  href="/guide"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
+                >
+                  Инструкции
+                </Link>
+                <Link
+                  href="/help"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
+                >
+                  Помощь
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  type="button"
+                  className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-white font-bold"
+                >
+                  Выйти
+                </button>
+              </div>
             </div>
-          </div>
-        ) : null}
-      </header>
+          ) : null}
+        </header>
+      </div>
 
       {/* SideNavBar (Hidden on small screens) */}
-      <aside className="fixed left-0 top-0 h-full hidden md:flex flex-col p-6 z-40 bg-[#efeeea] dark:bg-[#2a2a28] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)] pt-24">
+      <aside className="fixed left-0 top-24 bottom-0 hidden md:flex flex-col p-6 z-40 bg-[#efeeea] dark:bg-[#2a2a28] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)]">
 
         <nav className="flex flex-col gap-2">
           <a className="bg-[#e6e0c9] dark:bg-[#3e2723] text-[#271310] dark:text-[#ffba38] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200" href="#">
             <span className="material-symbols-outlined">vpn_key</span>
-            <span className="font-label">Мои ключи</span>
+            <span className="font-label">Моя подписка</span>
           </a>
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/referral">
-            <span className="material-symbols-outlined">redeem</span>
-            <span className="font-label">Реферальная программа</span>
-          </a>
-
           <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
             <span className="material-symbols-outlined">help</span>
             <span className="font-label">Помощь</span>
@@ -546,11 +573,31 @@ export default function ProfilePage() {
 
       {/* Main Canvas */}
       <main className="md:ml-64 pt-24 pb-12 px-4 md:px-12 max-w-6xl mx-auto flex-1">
+        {hasPaymentBanner && (
+          <div
+            className={`mb-8 rounded-2xl border px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+              paymentVerifyState === "pending"
+                ? "border-tertiary-fixed/40 bg-tertiary-fixed/10"
+                : "border-error/30 bg-error-container/20"
+            }`}
+          >
+            <p className="text-sm md:text-base text-on-surface">{paymentVerifyMessage}</p>
+            <button
+              type="button"
+              onClick={() => void verifyPendingPayment(true)}
+              disabled={isVerifyingPayment}
+              className="shrink-0 w-full sm:w-auto px-6 py-3 rounded-full font-bold bg-tertiary-fixed text-on-tertiary-fixed hover:brightness-95 disabled:opacity-60 transition-all"
+            >
+              {isVerifyingPayment ? "Проверка..." : "Проверить оплату"}
+            </button>
+          </div>
+        )}
+
         {/* Header Section */}
         <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-3xl md:text-5xl font-serif font-bold text-primary tracking-tight">Ваши ключи</h1>
-            <p className="text-on-surface-variant max-w-md">Управляйте вашими персональными VLESS-ключами. Каждый ключ частично скрыт для максимальной безопасности.</p>
+            <h1 className="text-3xl md:text-5xl font-serif font-bold text-primary tracking-tight">Ваша подписка</h1>
+            <p className="text-on-surface-variant max-w-md">Управляйте подпиской, следите за сроком действия и копируйте ссылку для подключения в приложении.</p>
           </div>
           <button
             className="w-full sm:w-auto bg-tertiary-fixed text-on-tertiary-fixed px-8 py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all shadow-sm"
@@ -573,10 +620,10 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2">
                     <h3 className="text-2xl md:text-3xl font-serif font-bold text-primary">
-                      У вас пока нет ключей
+                      У вас пока нет подписки
                     </h3>
                     <p className="text-on-surface-variant max-w-lg">
-                      Как только вы добавите ключ, он появится здесь — с быстрым копированием и статусом действия.
+                      Как только вы оформите подписку, она появится здесь — с быстрым копированием ссылки и статусом действия.
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-3 pt-2 w-full sm:w-auto">
@@ -595,7 +642,7 @@ export default function ProfilePage() {
                     </Link>
                   </div>
                   <div className="mt-2 w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-on-surface-variant">
-                    Совет: сначала пополните баланс, затем выберите локацию и срок действия.
+                    Совет: нажмите «Купить подписку», ознакомьтесь с условиями и перейдите к оплате.
                   </div>
                 </div>
               </div>
@@ -603,57 +650,105 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 {vpnKeys.map((k) => {
                   const expired = isExpired(k.expires_at);
+                  const linkFieldId = `subscription-link-${k.id}`;
                   return (
                     <div
                       key={k.id}
-                      className="bg-surface-container-lowest p-5 md:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:shadow-lg transition-all border border-transparent hover:border-outline-variant/20"
+                      className="bg-surface-container-lowest rounded-2xl border border-outline-variant/20 shadow-sm overflow-hidden"
                     >
-                      <div className="flex items-center gap-4 md:gap-5 min-w-0 w-full">
-                        <div className="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center overflow-hidden shrink-0">
-                          {k.country === "germany1" || k.country === "germany2" ? (
-                            <FlagBadge name="germany" size="lg" />
-                          ) : k.country === "austria" ? (
-                            <FlagBadge name="austria" size="lg" />
-                          ) : k.country === "lte_bypass" ? (
-                            <FlagBadge name="russia" size="lg" />
+                      <div className="px-5 py-4 md:px-8 md:py-6 space-y-5">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {expired ? (
+                            <span className="px-3 py-1 bg-error-container text-on-error-container text-xs font-bold uppercase rounded-full tracking-wider">
+                              Истек
+                            </span>
                           ) : (
-                            <span className="material-symbols-outlined text-primary">public</span>
+                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold uppercase rounded-full tracking-wider">
+                              Активен
+                            </span>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-bold text-primary text-lg">{countryLabel(k.country)}</h3>
-                            {expired ? (
-                              <span className="px-2 py-0.5 bg-error-container text-on-error-container text-[10px] font-bold uppercase rounded-full tracking-wider">
-                                Истек
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 bg-green-100 text-green-800 text-[10px] font-bold uppercase rounded-full tracking-wider">
-                                Активен
-                              </span>
-                            )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="rounded-xl bg-surface-container-low px-4 py-3">
+                            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Оформлена</p>
+                            <p className="text-sm font-semibold text-primary mt-1">
+                              {formatDateTime(k.created_at)}
+                            </p>
                           </div>
-                          <p className="text-sm text-on-surface-variant font-mono truncate max-w-[30ch] sm:max-w-[46ch]">
-                            {maskKey(k.vpn_key)}
-                          </p>
-                          <p className="text-xs text-on-surface-variant mt-1">
-                            Осталось:{" "}
-                            <span className="font-semibold text-primary">
+                          <div className="rounded-xl bg-surface-container-low px-4 py-3">
+                            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Действует до</p>
+                            <p className="text-sm font-semibold text-primary mt-1">
+                              {k.expires_at ? formatDateTime(k.expires_at) : "Без срока"}
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-surface-container-low px-4 py-3">
+                            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Осталось</p>
+                            <p className="text-sm font-semibold text-primary mt-1">
                               {getRemainingLabel(k.expires_at)}
-                            </span>
+                            </p>
+                          </div>
+                          <div className="rounded-xl bg-surface-container-low px-4 py-3">
+                            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Тариф</p>
+                            <p className="text-sm font-semibold text-primary mt-1">
+                              {formatDuration(k.duration)} · безлимит · до 3 устройств
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-bold text-primary">Ссылка для подключения</p>
+                            <Link
+                              href="/guide"
+                              className="text-xs font-bold text-primary underline decoration-primary/30 hover:decoration-primary"
+                            >
+                              Инструкция
+                            </Link>
+                          </div>
+                          <p className="text-sm text-on-surface-variant">
+                            Скопируйте ссылку и вставьте в Happ, Hiddify, V2RayNG или Amnezia.
                           </p>
+                          <div className="relative">
+                            <textarea
+                              id={linkFieldId}
+                              readOnly
+                              value={k.vpn_key}
+                              rows={3}
+                              onFocus={(e) => e.target.select()}
+                              onClick={(e) => e.currentTarget.select()}
+                              className="w-full rounded-xl border border-outline-variant/25 bg-surface-container px-4 py-3 pr-12 text-sm font-mono text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
+                              className="absolute right-2 top-2 p-2 rounded-lg bg-secondary-container text-primary hover:bg-tertiary-fixed transition-colors"
+                              title="Скопировать"
+                            >
+                              <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
+                            className="w-full bg-tertiary-fixed text-on-tertiary-fixed py-3.5 md:py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:brightness-95 transition-all"
+                          >
+                            <span className="material-symbols-outlined">content_copy</span>
+                            Скопировать ссылку подписки
+                          </button>
                         </div>
                       </div>
 
-                      {!expired ? (
-                        <button
-                          className="self-end sm:self-auto p-3 bg-secondary-container text-primary rounded-full hover:bg-tertiary-fixed transition-colors shrink-0"
-                          type="button"
-                          onClick={() => copyToClipboard(k.vpn_key)}
-                          title="Скопировать"
-                        >
-                          <span className="material-symbols-outlined">content_copy</span>
-                        </button>
+                      {k.vpn_key ? (
+                        <div className="px-5 pb-5 md:px-8 md:pb-6">
+                          <a
+                            href={k.vpn_key}
+                            className="w-full px-4 py-3.5 md:py-4 rounded-full font-bold bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all flex items-center justify-center gap-2"
+                          >
+                            <span className="material-symbols-outlined">link</span>
+                            Подключиться
+                          </a>
+                        </div>
                       ) : null}
                     </div>
                   );
@@ -670,19 +765,10 @@ export default function ProfilePage() {
             {/* Quick Help Card */}
             <div className="bg-secondary-container p-6 rounded-xl space-y-4">
               <h4 className="font-bold text-primary flex items-center gap-2"><span className="material-symbols-outlined">auto_fix_high</span> Быстрая настройка</h4>
-              <p className="text-sm text-on-secondary-container leading-relaxed">Скопируйте ключ VLESS и вставьте его в ваше приложение (Happ, Hiddify, V2RayNG, Amnezia).</p>
+              <p className="text-sm text-on-secondary-container leading-relaxed">Скопируйте ссылку подписки и вставьте её в ваше приложение (Happ, Hiddify, V2RayNG, Amnezia).</p>
               <Link className="inline-flex items-center text-primary text-sm font-bold underline decoration-primary/30 hover:decoration-primary" href="/guide">Инструкция по установке <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span></Link>
             </div>
 
-            {/* Referral Banner */}
-            <Link href="/referral" className="relative h-48 rounded-xl overflow-hidden group block">
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10"></div>
-              <img alt="Coffee beans" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" data-alt="top view of roasted coffee beans scattered on a rustic wooden surface with warm atmospheric lighting and rich textures" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoHgBcHzcfd54lX_wGAEV6qu16kOltrrn0XE4mAEBm80zAcZmJkyH9cl1-7DO3pKUGYEcJG3PaEKY4-b_7dSQasThrETVnGnQe6MK7w51KCAb4prMC1tyl7_EWmLLDgPYxY9Iexd0Cu37Lw4ydX_LWBgDOHbiwS6oOE9A2irfjSaMlwzWkbGqM7nwXLAcaS5PhtosE00iQ_M3IPQdl568ujAvr_-tUsOwv-XfmU90ZeJNCtEc-w8ctV1n_l4OOcp6lx-dLplniSvM" />
-              <div className="absolute bottom-4 left-4 right-4 z-20">
-                <p className="text-white font-bold leading-tight">Зарабатывай вместе с нами!</p>
-                <span className="mt-2 inline-block text-[10px] text-tertiary-fixed uppercase font-bold tracking-widest">Узнать больше</span>
-              </div>
-            </Link>
           </aside>
         </div>
       </main>
@@ -698,102 +784,17 @@ export default function ProfilePage() {
         <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
       </footer>
 
-      {/* TopUp Modal */}
-      {isTopUpOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm transition-opacity">
-          <div className="bg-surface-container-lowest w-full max-w-md rounded-[24px] shadow-2xl overflow-hidden flex flex-col relative transform transition-all">
-            <div className="px-6 py-6 border-b border-outline-variant/20 flex justify-between items-center">
-              <h2 className="text-2xl font-serif font-bold text-primary">Пополнение баланса</h2>
-              <button onClick={() => setIsTopUpOpen(false)} className="w-8 h-8 flex items-center justify-center bg-surface-container rounded-full text-on-surface hover:bg-surface-container-highest transition-colors">
-                <span className="material-symbols-outlined text-[20px]">close</span>
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Выберите сумму</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['150', '500', '1000'].map(amount => (
-                    <button
-                      key={amount}
-                      onClick={() => setTopUpAmount(amount)}
-                      className={`py-3 rounded-xl font-bold transition-all border ${topUpAmount === amount ? 'bg-tertiary-fixed text-on-tertiary-fixed border-tertiary-fixed shadow-md' : 'bg-surface-container text-on-surface border-transparent hover:bg-surface-container-high'}`}
-                    >
-                      {amount} ₽
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-on-surface-variant mb-3 uppercase tracking-widest">Или введите другую сумму</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={topUpAmount}
-                    onChange={(e) => setTopUpAmount(e.target.value)}
-                    className="w-full bg-surface-container-high text-primary font-mono font-bold text-lg rounded-xl px-4 py-4 outline-none border-2 border-transparent focus:border-tertiary-fixed transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    placeholder="Например, 300"
-                  />
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-on-surface-variant">₽</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-on-surface-variant mb-3 uppercase tracking-widest">
-                  ПРОМОКОД
-                </label>
-                <input
-                  type="text"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="Введите промокод"
-                  className="w-full bg-surface-container-high text-primary font-semibold rounded-xl px-4 py-4 outline-none border-2 border-transparent focus:border-tertiary-fixed transition-colors"
-                />
-                {promoBonusHint === "valid" ? (
-                  <p className="mt-2 text-sm font-semibold text-green-600 dark:text-green-400">
-                    Промокод действует: +10% к зачислению на баланс
-                  </p>
-                ) : null}
-                {promoBonusHint === "own" ? (
-                  <p className="mt-2 text-sm font-medium text-amber-700 dark:text-amber-400">
-                    Собственный промокод не даёт бонус к пополнению
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <div className="p-6 bg-surface-container-low border-t border-outline-variant/20">
-              <button
-                onClick={() => {
-                  const amount = Number(topUpAmount);
-                  if (Number.isFinite(amount) && amount > 0) {
-                    yookassaPayment(amount);
-                  }
-                  setIsTopUpOpen(false);
-                }}
-                className="w-full bg-primary text-on-primary py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                <span className="material-symbols-outlined">payments</span>
-                Продолжить оплату
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add Key Modal */}
+      {/* Payment Modal */}
       {isAddKeyOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest w-full max-w-lg rounded-[24px] shadow-2xl overflow-visible flex flex-col relative">
-            <div className="px-6 py-6 border-b border-outline-variant/20 flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-serif font-bold text-primary">
-                  {subscription.active ? "Продлить подписку" : "Купить подписку"}
-                </h2>
-                <p className="text-sm text-on-surface-variant mt-1">
-                  Единый тариф: 30 дней доступа.
-                </p>
-              </div>
+          <div className="bg-surface-container-lowest w-full max-w-[22rem] sm:max-w-lg md:max-w-xl lg:max-w-2xl rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden">
+            <div className="px-4 py-3 md:px-8 md:py-5 border-b border-outline-variant/20 flex justify-between items-center gap-3">
+              <h2 className="text-lg md:text-2xl font-serif font-bold text-primary">
+                {subscription.active ? "Продлить подписку" : "Купить подписку"}
+              </h2>
               <button
                 onClick={() => setIsAddKeyOpen(false)}
-                className="w-8 h-8 flex items-center justify-center bg-surface-container rounded-full text-on-surface hover:bg-surface-container-highest transition-colors"
+                className="w-8 h-8 shrink-0 flex items-center justify-center bg-surface-container rounded-full text-on-surface hover:bg-surface-container-highest transition-colors"
                 type="button"
                 aria-label="Закрыть"
               >
@@ -801,52 +802,82 @@ export default function ProfilePage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="rounded-xl bg-surface-container-low px-4 py-3 text-sm text-on-surface-variant">
-                Подписка на 30 дней. Содержит доступ к 4 локациям.
+            <div className="px-4 py-3 md:px-8 md:py-6 space-y-3 md:space-y-5">
+              <div className="grid grid-cols-3 gap-2 md:gap-4">
+                {SUBSCRIPTION_PLANS.map((plan) => {
+                  const active = selectedPlanId === plan.id;
+                  return (
+                    <button
+                      key={plan.id}
+                      type="button"
+                      onClick={() => setSelectedPlanId(plan.id)}
+                      className={`rounded-lg md:rounded-xl border px-2 py-2 md:px-4 md:py-4 text-left transition-all ${
+                        active
+                          ? "border-tertiary-fixed bg-tertiary-fixed/15"
+                          : "border-outline-variant/25 bg-surface-container"
+                      }`}
+                    >
+                      <div className="font-bold text-primary text-[10px] md:text-sm leading-tight">{plan.label}</div>
+                      <div className="text-sm md:text-xl font-mono font-bold text-primary mt-0.5 md:mt-1">
+                        {plan.price} ₽
+                      </div>
+                      {plan.discount ? (
+                        <div className="text-[9px] md:text-xs font-bold text-green-700 dark:text-green-400 mt-0.5 md:mt-1">
+                          {plan.discount}
+                        </div>
+                      ) : (
+                        <div className="text-[9px] md:text-xs text-on-surface-variant mt-0.5 md:mt-1">{plan.periodLabel}</div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-lg md:rounded-xl bg-surface-container-low px-3 py-2.5 md:px-5 md:py-4 text-[11px] md:text-sm text-on-surface-variant leading-snug">
+                <p className="font-semibold text-primary text-xs md:text-base mb-1">В подписку входит</p>
+                <p>
+                  {selectedPlan.periodLabel.toLowerCase()} · безлимит · до 3 устройств · Обход LTE глушилок
+                </p>
+                <p className="font-semibold text-primary text-xs md:text-base mt-2 md:mt-3 mb-1.5 md:mb-2">Локации</p>
+                <div className="grid grid-cols-4 md:grid-cols-4 gap-1.5 md:gap-3">
+                  {VPN_LOCATIONS.map((location) => (
+                    <div
+                      key={location.flag}
+                      className="flex flex-col items-center gap-0.5 md:gap-1 rounded-md md:rounded-lg bg-surface-container px-1 py-1 md:px-2 md:py-2 text-center"
+                    >
+                      <FlagBadge name={location.flag} size="sm" />
+                      <span className="text-[9px] md:text-xs leading-tight text-on-surface">{location.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between rounded-lg md:rounded-xl border border-outline-variant/20 bg-surface-container-low px-3 py-2 md:px-5 md:py-4">
+                <span className="text-xs md:text-sm font-bold text-primary uppercase tracking-wide">К оплате</span>
+                <span className="text-xl md:text-3xl font-mono font-bold text-primary">{selectedPlan.price} ₽</span>
               </div>
             </div>
 
-            <div className="px-6 pb-2">
-              <div className="rounded-2xl bg-surface-container-low border border-outline-variant/20 px-5 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div>
-                    <div className="text-base md:text-lg font-extrabold text-primary uppercase tracking-widest">
-                      Итого
-                    </div>
-                    <div className="text-xs text-on-surface-variant">
-                      Срок: 30 дней
-                    </div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-mono font-bold text-primary">
-                    {subscriptionPlan.total} ₽
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 bg-surface-container-low border-t border-outline-variant/20 flex flex-col sm:flex-row gap-3">
+            <div className="px-4 pb-4 md:px-8 md:pb-6 flex gap-2 md:gap-4">
               <button
                 type="button"
                 onClick={() => setIsAddKeyOpen(false)}
-                className="sm:flex-1 px-6 py-4 rounded-full font-bold border border-outline-variant/40 text-primary hover:bg-surface-container transition-colors"
+                className="flex-1 px-4 py-2.5 md:py-4 rounded-full text-sm md:text-base font-bold border border-outline-variant/40 text-primary hover:bg-surface-container transition-colors"
               >
                 Отмена
               </button>
               <button
                 type="button"
-                onClick={buyVpnKey}
-                disabled={isBuyingKey}
-                className="sm:flex-1 bg-primary text-on-primary py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                onClick={payForSubscription}
+                disabled={isPaying}
+                className="flex-[1.4_1_0%] bg-green-600 hover:bg-green-700 text-white py-2.5 md:py-4 px-4 rounded-full font-bold text-base md:text-lg shadow-lg flex items-center justify-center gap-2 md:gap-3 disabled:opacity-60"
               >
-                <span className="material-symbols-outlined">arrow_forward</span>
-                {isBuyingKey ? "Оплата..." : "Оплатить"}
+                <img src="/sbp.png" alt="СБП" className="h-6 md:h-8 w-auto object-contain" />
+                {isPaying ? "Переход..." : "Оплатить!"}
               </button>
             </div>
             {buyKeyMessage ? (
-              <div className="px-6 pb-6 text-sm text-on-surface-variant">{buyKeyMessage}</div>
+              <div className="px-4 md:px-8 pb-3 md:pb-4 text-xs md:text-sm text-on-surface-variant">{buyKeyMessage}</div>
             ) : null}
           </div>
         </div>

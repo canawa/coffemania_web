@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ProfileRouteRefresh from "./components/ProfileRouteRefresh";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -8,14 +9,14 @@ export const metadata: Metadata = {
     template: "%s | КОФЕМАНИЯ ВПН",
   },
   description:
-    "Быстрый и удобный VPN-сервис: регистрация, пополнение баланса, покупка ключей и подключение за пару минут.",
+    "Быстрый и удобный VPN-сервис: регистрация, оплата подписки и подключение за пару минут.",
   applicationName: "КОФЕМАНИЯ ВПН",
   keywords: [
     "VPN",
     "КОФЕМАНИЯ ВПН",
     "безопасный VPN",
     "VLESS",
-    "vpn ключ",
+    "vpn подписка",
     
   ],
   alternates: {
@@ -85,7 +86,10 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ProfileRouteRefresh />
+        {children}
+      </body>
     </html>
   );
 }

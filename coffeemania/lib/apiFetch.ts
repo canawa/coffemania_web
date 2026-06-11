@@ -1,4 +1,9 @@
-export const API_BASE_URL = "https://api.coffeemaniavpn.ru";
+const SERVER_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8001";
+
+/** В браузере — same-origin прокси, чтобы cookie авторизации работали. */
+export const API_BASE_URL =
+  typeof window !== "undefined" ? "/api/backend" : SERVER_API_URL;
 
 export type ApiFetchInit = RequestInit & {
   /** Отключить редирект на /login при 401 (редко нужно). */

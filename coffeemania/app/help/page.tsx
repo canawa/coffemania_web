@@ -19,17 +19,17 @@ export default function HelpPage() {
 
           <section className="mt-10 space-y-6 text-on-surface-variant">
             <div className="rounded-xl bg-surface-container-low p-5">
-              <h2 className="text-lg font-bold text-primary">Как получить VPN-ключ?</h2>
+              <h2 className="text-lg font-bold text-primary">Как получить подписку?</h2>
               <p className="mt-2">
-                Пополните баланс в личном кабинете, откройте «Добавить ключ», выберите страну и длительность,
-                затем нажмите «Оплатить». Ключ появится в списке автоматически.
+                В личном кабинете нажмите «Купить подписку», ознакомьтесь с информацией о платеже
+                и нажмите «Оплатить!». После успешной оплаты через ЮKassa подписка появится автоматически.
               </p>
             </div>
 
             <div className="rounded-xl bg-surface-container-low p-5">
               <h2 className="text-lg font-bold text-primary">Как подключиться в приложении Amnezia?</h2>
               <p className="mt-2">
-                Откройте приложение, нажмите «+», вставьте ваш ключ, нажмите Continue и затем Connect.
+                Откройте приложение, нажмите «+», вставьте ссылку подписки, нажмите Continue и затем Connect.
                 Подробная инструкция доступна на странице «Guide».
               </p>
             </div>

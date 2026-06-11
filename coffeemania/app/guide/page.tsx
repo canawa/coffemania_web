@@ -16,7 +16,7 @@ export default function GuidePage() {
               Как установить VPN
             </h1>
             <p className="mt-4 text-on-surface-variant">
-              Пошаговая инструкция по установке клиента Amnezia и подключению по ключу.
+              Пошаговая инструкция по установке клиента Amnezia и подключению по подписке.
             </p>
           </header>
 
@@ -66,8 +66,8 @@ export default function GuidePage() {
             <h2 className="text-2xl font-bold text-primary">2) Настройка приложения</h2>
             <ol className="space-y-3 text-on-surface-variant list-decimal pl-5">
               <li>Нажмите значок <b>«+»</b> в нижней панели приложения.</li>
-              <li>Скопируйте ключ, который вы приобрели в личном кабинете.</li>
-              <li>Вставьте ключ в поле ввода и нажмите <b>Continue</b>.</li>
+              <li>Скопируйте ссылку подписки из личного кабинета.</li>
+              <li>Вставьте ссылку в поле ввода и нажмите <b>Continue</b>.</li>
               <li>Нажмите <b>Connect</b> и дождитесь статуса подключения.</li>
             </ol>
           </section>
@@ -86,7 +86,7 @@ export default function GuidePage() {
             <div className="rounded-xl overflow-hidden border border-outline-variant/20 max-w-md mx-auto">
               <img
                 src="/guide/guide-2.jpg"
-                alt="Шаг 2: вставьте ключ и нажмите Continue"
+                alt="Шаг 2: вставьте ссылку подписки и нажмите Continue"
                 className="w-full h-auto object-cover"
               />
             </div>

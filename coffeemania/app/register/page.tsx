@@ -133,7 +133,7 @@ export default function RegisterPage() {
               Регистрация
             </h1>
             <p className="mt-4 text-on-surface-variant">
-              Создайте аккаунт для доступа к личному кабинету и ключам.
+              Создайте аккаунт для доступа к личному кабинету и подписке.
             </p>
 
             <form className="mt-10 space-y-6" onSubmit={onSubmit}>
