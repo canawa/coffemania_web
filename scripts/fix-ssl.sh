@@ -16,7 +16,7 @@ fi
 EMAIL="${CERTBOT_EMAIL:-}"
 
 if [[ -z "$EMAIL" ]]; then
-  echo "Добавь CERTBOT_EMAIL=твой@email.com в .env"
+  echo "Добавь в .env: CERTBOT_EMAIL=твой@email.com"
   exit 1
 fi
 
@@ -25,28 +25,29 @@ if ! docker compose version &>/dev/null; then
   DC="docker-compose"
 fi
 
-is_letsencrypt_cert() {
+is_letsencrypt() {
   [[ -f "$CERT_LIVE" ]] \
     && openssl x509 -in "$CERT_LIVE" -noout -issuer 2>/dev/null \
       | grep -qi "Let's Encrypt"
 }
 
-if is_letsencrypt_cert; then
-  echo "Let's Encrypt сертификат уже есть."
-  $DC exec nginx nginx -s reload 2>/dev/null || true
+if is_letsencrypt; then
+  echo "Уже Let's Encrypt:"
   openssl x509 -in "$CERT_LIVE" -noout -issuer -dates
   exit 0
 fi
 
+echo "Сейчас самоподписанный сертификат — удаляем и запрашиваем Let's Encrypt..."
+
 mkdir -p nginx/certbot-www
 
-echo "Удаляем самоподписанный сертификат..."
 $DC stop nginx 2>/dev/null || true
+
 rm -rf "nginx/letsencrypt/live/${DOMAIN}"
 rm -rf "nginx/letsencrypt/archive/${DOMAIN}"
 rm -f "nginx/letsencrypt/renewal/${DOMAIN}.conf"
 
-echo "Запрашиваем Let's Encrypt (standalone)..."
+echo "Certbot standalone (порт 80)..."
 $DC run --rm -p 80:80 certbot certonly --standalone \
   -d "${DOMAIN}" \
   -d "www.${DOMAIN}" \
@@ -55,13 +56,18 @@ $DC run --rm -p 80:80 certbot certonly --standalone \
   --no-eff-email \
   --non-interactive
 
-echo "Поднимаем стек..."
-$DC up -d --build
+echo "Запускаем nginx..."
+$DC up -d nginx
 
-if is_letsencrypt_cert; then
-  echo "Готово: https://${DOMAIN}"
+if is_letsencrypt; then
+  echo ""
+  echo "OK — https://${DOMAIN}"
   openssl x509 -in "$CERT_LIVE" -noout -issuer -dates
 else
-  echo "Ошибка: сертификат Let's Encrypt не получен."
+  echo ""
+  echo "Не удалось. Проверь:"
+  echo "  dig +short ${DOMAIN}"
+  echo "  dig +short www.${DOMAIN}"
+  echo "  ss -tlnp | grep ':80'"
   exit 1
 fi
