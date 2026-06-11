@@ -47,7 +47,7 @@ rm -rf "nginx/letsencrypt/archive/${DOMAIN}"
 rm -f "nginx/letsencrypt/renewal/${DOMAIN}.conf"
 
 echo "Запрашиваем Let's Encrypt (standalone)..."
-$DC run --rm -p 80:80 certbot certonly --standalone \
+$DC run --rm --entrypoint certbot -p 80:80 certbot certonly --standalone \
   -d "${DOMAIN}" \
   -d "www.${DOMAIN}" \
   --email "${EMAIL}" \
