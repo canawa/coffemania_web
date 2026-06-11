@@ -28,4 +28,11 @@ curl -kI --max-time 5 https://127.0.0.1/ -H "Host: coffeemaniavpn.ru" 2>&1 || tr
 
 echo ""
 echo "=== SSL-сертификат ==="
-ls -la nginx/letsencrypt/live/coffeemaniavpn.ru/ 2>&1 || echo "Сертификат ещё не выпущен — запусти: ./scripts/init-letsencrypt.sh"
+CERT="nginx/letsencrypt/live/coffeemaniavpn.ru/fullchain.pem"
+if [[ -f "$CERT" ]]; then
+  ls -la nginx/letsencrypt/live/coffeemaniavpn.ru/
+  echo "Issuer:"
+  openssl x509 -in "$CERT" -noout -issuer -dates 2>&1
+else
+  echo "Сертификат не найден — запусти: ./scripts/init-letsencrypt.sh"
+fi
