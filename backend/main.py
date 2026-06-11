@@ -98,10 +98,10 @@ def _clear_auth_cookie(response: JSONResponse) -> None:
 
 app = FastAPI()
 
-SUBSCRIPTION_PRICE = 1
+SUBSCRIPTION_PRICE = 149
 SUBSCRIPTION_DURATION_DAYS = 30
 SUBSCRIPTION_PLANS = {
-    30: 1,
+    30: 149,
     90: 399,
     365: 899,
 }

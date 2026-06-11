@@ -52,9 +52,6 @@ function markPendingPayment(paymentId: string) {
 
 export default function ProfilePage() {
   const pathname = usePathname();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const mobileMenuRef = useRef<HTMLDivElement | null>(null);
-  const mobileMenuButtonRef = useRef<HTMLButtonElement | null>(null);
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
@@ -84,50 +81,6 @@ export default function ProfilePage() {
       expires_at: string | null;
     }>
   >([]);
-
-  function useClickOutside(
-    refs: Array<React.RefObject<HTMLElement | null>>,
-    onOutside: () => void,
-    enabled: boolean,
-  ) {
-    useEffect(() => {
-      if (!enabled) return;
-      const handler = (event: MouseEvent | TouchEvent) => {
-        const target = event.target as Node | null;
-        if (!target) return;
-        for (const ref of refs) {
-          const el = ref.current;
-          if (el && el.contains(target)) return;
-        }
-        onOutside();
-      };
-      document.addEventListener("mousedown", handler);
-      document.addEventListener("touchstart", handler, { passive: true });
-      return () => {
-        document.removeEventListener("mousedown", handler);
-        document.removeEventListener("touchstart", handler);
-      };
-    }, [enabled, onOutside, refs]);
-  }
-
-  useClickOutside(
-    [mobileMenuRef, mobileMenuButtonRef],
-    () => setIsMobileMenuOpen(false),
-    isMobileMenuOpen,
-  );
-
-  const handleLogout = async () => {
-    try {
-      await apiFetch(`${API_BASE_URL}/logout`, {
-        method: "POST",
-        credentials: "include",
-        skip401Redirect: true,
-      });
-    } catch {
-      // ignore network errors — still redirect home
-    }
-    window.location.href = "/";
-  };
 
   const payForSubscription = async () => {
     setIsPaying(true);
@@ -496,83 +449,7 @@ export default function ProfilePage() {
     (paymentVerifyState === "pending" || paymentVerifyState === "error");
 
   return (
-    <div className="bg-surface text-on-surface selection:bg-tertiary-fixed min-h-screen flex flex-col">
-      <div className="fixed top-0 left-0 right-0 z-[70]">
-        <header className="relative bg-[#fbf9f5] dark:bg-[#1b1c1a]">
-          <nav className="flex flex-wrap sm:flex-nowrap justify-between items-center w-full gap-2 sm:gap-3 px-4 md:px-8 py-3 md:py-4">
-            <div className="flex items-center gap-2 min-w-0">
-              <img src="/logo.svg" alt="Логитип" className="w-8 h-8 object-contain" />
-              <div className="text-sm sm:text-xl md:text-2xl font-serif font-bold text-[#271310] dark:text-[#ffffff] whitespace-nowrap">
-                <span className="bg-orange-200 dark:bg-orange-300 px-1 text-[#271310]">КОФЕМАНИЯ</span>
-                <span className="hidden sm:inline"> ВПН</span>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-8">
-              <Link className="text-[#504442] dark:text-[#efeeea] hover:text-[#271310] dark:hover:text-[#ffba38] transition-colors duration-300" href="/guide">Инструкции</Link>
-              <button onClick={handleLogout} className="bg-primary-container text-white hover:bg-error-container hover:text-white hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300">Выйти</button>
-            </div>
-            <button
-              className="md:hidden text-primary"
-              type="button"
-              onClick={() => setIsMobileMenuOpen((v) => !v)}
-              aria-label="Открыть меню"
-              ref={mobileMenuButtonRef}
-            >
-              <span className="material-symbols-outlined">menu</span>
-            </button>
-          </nav>
-          <div className="bg-[#efeeea] dark:bg-[#2a2a28] h-px w-full" />
-          {isMobileMenuOpen ? (
-            <div
-              className="md:hidden absolute right-3 top-[calc(100%+8px)] z-[60]"
-              ref={mobileMenuRef}
-            >
-              <div className="w-[260px] max-w-[72vw] rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-3 flex flex-col gap-2 shadow-2xl">
-                <Link
-                  href="/guide"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
-                >
-                  Инструкции
-                </Link>
-                <Link
-                  href="/help"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className="w-full px-4 py-3 rounded-xl text-primary font-semibold hover:bg-surface-container block"
-                >
-                  Помощь
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  type="button"
-                  className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-white font-bold"
-                >
-                  Выйти
-                </button>
-              </div>
-            </div>
-          ) : null}
-        </header>
-      </div>
-
-      {/* SideNavBar (Hidden on small screens) */}
-      <aside className="fixed left-0 top-24 bottom-0 hidden md:flex flex-col p-6 z-40 bg-[#efeeea] dark:bg-[#2a2a28] w-64 rounded-r-3xl shadow-[0_12px_32px_-4px_rgba(27,28,26,0.06)]">
-
-        <nav className="flex flex-col gap-2">
-          <a className="bg-[#e6e0c9] dark:bg-[#3e2723] text-[#271310] dark:text-[#ffba38] rounded-full px-4 py-3 font-bold flex items-center gap-3 translate-x-1 transition-transform duration-200" href="#">
-            <span className="material-symbols-outlined">vpn_key</span>
-            <span className="font-label">Моя подписка</span>
-          </a>
-          <a className="text-[#504442] dark:text-[#efeeea] px-4 py-3 flex items-center gap-3 hover:bg-[#f5f3ef] dark:hover:bg-[#3e2723]/50 rounded-full transition-all" href="/help">
-            <span className="material-symbols-outlined">help</span>
-            <span className="font-label">Помощь</span>
-          </a>
-        </nav>
-
-      </aside>
-
-      {/* Main Canvas */}
-      <main className="md:ml-64 pt-24 pb-12 px-4 md:px-12 max-w-6xl mx-auto flex-1">
+    <>
         {hasPaymentBanner && (
           <div
             className={`mb-8 rounded-2xl border px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
@@ -609,9 +486,8 @@ export default function ProfilePage() {
           </button>
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          {/* Keys List area */}
-          <section className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,42rem)_minmax(0,1fr)] gap-6 lg:gap-8 w-full min-w-0">
+          <section className="min-w-0 space-y-6">
             {vpnKeys.length === 0 ? (
               <div className="p-10 md:p-12 rounded-2xl bg-surface-container-lowest border border-outline-variant/20 shadow-sm">
                 <div className="flex flex-col items-center text-center gap-5">
@@ -634,12 +510,6 @@ export default function ProfilePage() {
                     >
                       {subscription.active ? "Продлить подписку" : "Купить подписку"}
                     </button>
-                    <Link
-                      className="px-8 py-3 rounded-full font-bold border border-outline-variant/40 text-primary hover:bg-surface-container transition-colors text-center"
-                      href="/guide"
-                    >
-                      Инструкции
-                    </Link>
                   </div>
                   <div className="mt-2 w-full bg-surface-container-low rounded-xl px-4 py-3 text-sm text-on-surface-variant">
                     Совет: нажмите «Купить подписку», ознакомьтесь с условиями и перейдите к оплате.
@@ -663,7 +533,7 @@ export default function ProfilePage() {
                               Истек
                             </span>
                           ) : (
-                            <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold uppercase rounded-full tracking-wider">
+                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300 text-xs font-bold uppercase rounded-full tracking-wider">
                               Активен
                             </span>
                           )}
@@ -697,18 +567,7 @@ export default function ProfilePage() {
                         </div>
 
                         <div className="space-y-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <p className="font-bold text-primary">Ссылка для подключения</p>
-                            <Link
-                              href="/guide"
-                              className="text-xs font-bold text-primary underline decoration-primary/30 hover:decoration-primary"
-                            >
-                              Инструкция
-                            </Link>
-                          </div>
-                          <p className="text-sm text-on-surface-variant">
-                            Скопируйте ссылку и вставьте в Happ, Hiddify, V2RayNG или Amnezia.
-                          </p>
+                          <p className="font-bold text-primary">Ссылка для подключения</p>
                           <div className="relative">
                             <textarea
                               id={linkFieldId}
@@ -717,12 +576,12 @@ export default function ProfilePage() {
                               rows={3}
                               onFocus={(e) => e.target.select()}
                               onClick={(e) => e.currentTarget.select()}
-                              className="w-full rounded-xl border border-outline-variant/25 bg-surface-container px-4 py-3 pr-12 text-sm font-mono text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"
+                              className="w-full rounded-xl border border-outline-variant/25 dark:border-[#8c7a72]/50 bg-surface-container dark:bg-[#423431] px-4 py-3 pr-12 text-sm font-mono text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"
                             />
                             <button
                               type="button"
                               onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
-                              className="absolute right-2 top-2 p-2 rounded-lg bg-secondary-container text-primary hover:bg-tertiary-fixed transition-colors"
+                              className="absolute right-2 top-2 p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
                               title="Скопировать"
                             >
                               <span className="material-symbols-outlined text-[20px]">content_copy</span>
@@ -757,32 +616,19 @@ export default function ProfilePage() {
             )}
           </section>
 
-          {/* Summary Sidebar */}
-          <aside className="space-y-6">
-            {/* Status Card */}
-
-
-            {/* Quick Help Card */}
-            <div className="bg-secondary-container p-6 rounded-xl space-y-4">
-              <h4 className="font-bold text-primary flex items-center gap-2"><span className="material-symbols-outlined">auto_fix_high</span> Быстрая настройка</h4>
-              <p className="text-sm text-on-secondary-container leading-relaxed">Скопируйте ссылку подписки и вставьте её в ваше приложение (Happ, Hiddify, V2RayNG, Amnezia).</p>
-              <Link className="inline-flex items-center text-primary text-sm font-bold underline decoration-primary/30 hover:decoration-primary" href="/guide">Инструкция по установке <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span></Link>
-            </div>
-
+          <aside className="flex flex-col gap-4 min-w-0 max-w-full lg:sticky lg:top-28">
+            <a
+              href="https://github.com/canawa/vpn_client/releases/download/beta-release-1.01/coffeemania-beta-1.01.apk"
+              className="block w-full max-w-full rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"
+            >
+              <img
+                src="/appdownload.png"
+                alt="Кофемания VPN — скачать приложение для Android"
+                className="block w-full max-w-full h-auto"
+              />
+            </a>
           </aside>
         </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="w-full py-12 px-8 flex flex-col items-center gap-6 border-t border-[#efeeea] dark:border-[#2a2a28] bg-[#fbf9f5] dark:bg-[#1b1c1a] mt-auto">
-        <div className="flex flex-wrap justify-center gap-8">
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/about">О нас</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/privacy">Политика конфиденциальности</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/terms">Условия использования</a>
-          <a className="text-[#504442] dark:text-[#efeeea]/60 hover:text-[#271310] dark:hover:text-[#ffffff] text-sm uppercase tracking-widest font-label" href="/support">Поддержка</a>
-        </div>
-        <p className="text-[#504442] dark:text-[#efeeea]/60 text-xs uppercase tracking-widest font-label">© Coffee Mania VPN.</p>
-      </footer>
 
       {/* Payment Modal */}
       {isAddKeyOpen && (
@@ -890,6 +736,6 @@ export default function ProfilePage() {
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

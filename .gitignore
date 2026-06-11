@@ -2,3 +2,5 @@
 **/*.db
 **/__pycache__/
 **/*.pyc
+nginx/letsencrypt/
+nginx/certbot-www/

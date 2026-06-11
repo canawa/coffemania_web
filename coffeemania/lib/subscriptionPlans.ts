@@ -10,7 +10,7 @@ export type SubscriptionPlan = {
 };
 
 export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
-  { id: "1m", label: "1 месяц", periodLabel: "30 дней", days: 30, price: 1 },
+  { id: "1m", label: "1 месяц", periodLabel: "30 дней", days: 30, price: 149 },
   {
     id: "3m",
     label: "3 месяца",
