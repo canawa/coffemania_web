@@ -5,22 +5,20 @@ services:
     container_name: coffeemania-backend
     env_file:
       - .env
-    environment:
-      APP_ENV: production
-    volumes:
-      - ./backend/database.db:/app/database.db
     expose:
       - "8001"
+    volumes:
+      - ./backend/database.db:/app/database.db
     restart: unless-stopped
 
   frontend:
     build:
       context: ./coffeemania
       args:
-        NEXT_PUBLIC_API_URL: http://backend:8001
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: coffeemania-frontend
-    environment:
-      NEXT_PUBLIC_API_URL: http://backend:8001
+    env_file:
+      - .env
     expose:
       - "3002"
     depends_on:
