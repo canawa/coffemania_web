@@ -1,7 +1,17 @@
+import os
 import sqlite3 as sq
+from pathlib import Path
+
+DB_PATH = os.getenv("DATABASE_PATH", "database.db")
+
+
+def connect():
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+    return sq.connect(DB_PATH)
+
 
 def create_tables():
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cursor = con.cursor()
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (

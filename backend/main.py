@@ -10,7 +10,7 @@ from datetime import datetime
 from uuid import uuid4
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3 as sq
-from database import create_tables
+from database import create_tables, connect
 from models import (
     User,
     PaymentRequest,
@@ -112,7 +112,7 @@ def _plan_price(duration_days: int) -> int | None:
 
 
 def _get_user_id_by_email(email: str) -> int | None:
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute("SELECT id FROM users WHERE email = ? LIMIT 1", (email,))
         row = cur.fetchone()
@@ -153,7 +153,7 @@ async def _sync_subscription_from_remnawave(email: str) -> None:
     expires_at = subscription.get("expires_at")
     now_iso = datetime.now().isoformat()
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "SELECT id FROM vpn_keys WHERE email = ? ORDER BY id DESC LIMIT 1",
@@ -243,7 +243,7 @@ def validate_promo_for_topup(request: Request, code: str = ""):
     if not normalized:
         return {"valid": False, "own_code": False}
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "SELECT email FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
@@ -260,7 +260,7 @@ def validate_promo_for_topup(request: Request, code: str = ""):
 
 @app.post("/login")
 def login(payload: LoginRequest):
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cursor = con.cursor()
         cursor.execute("SELECT password FROM users WHERE email = ? LIMIT 1", (payload.email,))
         user = cursor.fetchone()
@@ -293,7 +293,7 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
             content={"status": "error", "message": "Неверный email или пароль"},
             status_code=401,
         )
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cursor = con.cursor()
         cursor.execute("SELECT id, balance FROM users WHERE email = ? LIMIT 1", (payload['email'],))
         user_row = cursor.fetchone()
@@ -338,7 +338,7 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         )
 
     # Deduct balance only after a key is successfully created.
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             """
@@ -392,7 +392,7 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
 
     required = SUBSCRIPTION_PRICE
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         con.row_factory = sq.Row
         cur = con.cursor()
         cur.execute("SELECT balance FROM users WHERE email = ? LIMIT 1", (payload["email"],))
@@ -522,7 +522,7 @@ async def _provision_new_subscription(email: str, duration_days: int) -> dict | 
 
     created_at = datetime.now()
     expires_at = created_at + timedelta(days=duration_days)
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "INSERT INTO vpn_keys (email, vpn_username, vpn_key, duration, country, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -550,7 +550,7 @@ async def _provision_renew_subscription(
     subscription_id: Optional[int],
     duration_days: int,
 ) -> dict | None:
-    with sq.connect("database.db") as con:
+    with connect() as con:
         con.row_factory = sq.Row
         cur = con.cursor()
 
@@ -649,7 +649,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
         )
 
     if promo_code:
-        with sq.connect("database.db") as con:
+        with connect() as con:
             cur = con.cursor()
             cur.execute(
                 "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
@@ -708,7 +708,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
             status_code=502,
         )
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             """
@@ -739,7 +739,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
 def _normalize_payment_promo_code(promo_code: Optional[str], email: str) -> Optional[str]:
     if not promo_code:
         return None
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
@@ -762,7 +762,7 @@ async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
     if payment.status != "succeeded":
         return {"status": "error", "message": "Платёж не был успешно завершён"}
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "SELECT fulfilled FROM transactions WHERE payment_id = ? LIMIT 1",
@@ -772,7 +772,7 @@ async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
         if tx and tx[0]:
             return {"status": "success"}
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             """
@@ -818,7 +818,7 @@ async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
         }
 
     amount = float(payment.amount.value)
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         try:
             cur.execute(
@@ -877,7 +877,7 @@ def get_balance(request: Request):
             content={"status": "error", "message": "Неверный email или пароль"},
             status_code=401,
         )
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cursor = con.cursor()
         cursor.execute("SELECT balance FROM users WHERE email = ? LIMIT 1", (payload['email'],))
         balance = cursor.fetchone()
@@ -897,7 +897,7 @@ async def get_vpn_keys(request: Request):
 
     await _sync_subscription_from_remnawave(payload["email"])
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         con.row_factory = sq.Row
         cur = con.cursor()
         cur.execute(
@@ -926,7 +926,7 @@ async def get_subscription(request: Request):
 
     await _sync_subscription_from_remnawave(payload["email"])
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         con.row_factory = sq.Row
         cur = con.cursor()
         cur.execute(
@@ -966,7 +966,7 @@ def get_referral(request: Request):
             status_code=401,
         )
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute(
             "SELECT promo_code, withdrawed FROM users WHERE email = ? LIMIT 1",
@@ -1040,7 +1040,7 @@ def create_referral_code(payload_req: ReferralCodeRequest, request: Request):
             status_code=400,
         )
 
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cur = con.cursor()
         cur.execute("SELECT code FROM referral_codes WHERE email = ? LIMIT 1", (payload["email"],))
         exists = cur.fetchone()
@@ -1124,7 +1124,7 @@ def admin_users(request: Request):
             content={"status": "error", "message": "Нет доступа"},
             status_code=401,
         )
-    with sq.connect("database.db") as con:
+    with connect() as con:
         con.row_factory = sq.Row
         cur = con.cursor()
         cur.execute(
@@ -1140,7 +1140,7 @@ def admin_users(request: Request):
 
 @app.post("/register")
 def register(user: User):
-    with sq.connect("database.db") as con:
+    with connect() as con:
         cursor = con.cursor()
         cursor.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (user.email,))
         existing_user = cursor.fetchone()
