@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,10 +7,16 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/profile", "/referral", "/admin"],
+        disallow: [
+          "/api/",
+          "/admin",
+          "/profile",
+          "/referral",
+          "/login",
+        ],
       },
     ],
-    sitemap: "https://coffeemaniavpn.ru/sitemap.xml",
-    host: "https://coffeemaniavpn.ru",
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

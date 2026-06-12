@@ -1,49 +1,46 @@
 import type { Metadata } from "next";
 import ProfileRouteRefresh from "./components/ProfileRouteRefresh";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_KEYWORDS,
+  SITE_LOCALE,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://coffeemaniavpn.ru"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "КОФЕМАНИЯ ВПН",
-    template: "%s | КОФЕМАНИЯ ВПН",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "Быстрый и удобный VPN-сервис: регистрация, оплата подписки и подключение за пару минут.",
-  applicationName: "КОФЕМАНИЯ ВПН",
-  keywords: [
-    "VPN",
-    "КОФЕМАНИЯ ВПН",
-    "безопасный VPN",
-    "VLESS",
-    "vpn подписка",
-    
-  ],
-  alternates: {
-    canonical: "/",
+  description: DEFAULT_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [...DEFAULT_KEYWORDS],
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
   },
   openGraph: {
     type: "website",
-    url: "https://coffeemaniavpn.ru",
-    siteName: "КОФЕМАНИЯ ВПН",
-    title: "КОФЕМАНИЯ ВПН",
-    description:
-      "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
-    locale: "ru_RU",
+    siteName: SITE_NAME,
+    locale: SITE_LOCALE,
     images: [
       {
         url: "/logo.svg",
         width: 512,
         height: 512,
-        alt: "КОФЕМАНИЯ ВПН",
+        alt: SITE_NAME,
       },
     ],
   },
   twitter: {
-    card: "summary",
-    title: "КОФЕМАНИЯ ВПН",
-    description:
-      "Надежный VPN-сервис с быстрым стартом, гибкими тарифами и удобным личным кабинетом.",
+    card: "summary_large_image",
     images: ["/logo.svg"],
   },
   robots: {
