@@ -657,10 +657,10 @@ export default function ProfilePage() {
                       key={plan.id}
                       type="button"
                       onClick={() => setSelectedPlanId(plan.id)}
-                      className={`rounded-lg md:rounded-xl border px-2 py-2 md:px-4 md:py-4 text-left transition-all ${
+                      className={`rounded-lg md:rounded-xl border-2 px-2 py-2 md:px-4 md:py-4 text-left transition-all shadow-sm ${
                         active
-                          ? "border-tertiary-fixed bg-tertiary-fixed/15"
-                          : "border-outline-variant/25 bg-surface-container"
+                          ? "border-[#3D1C1C] dark:border-[#ffba38] bg-[#C8B8A8] dark:bg-[#423431] ring-2 ring-[#3D1C1C]/20 dark:ring-[#ffba38]/25"
+                          : "border-[#B09080]/60 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#322522] hover:border-[#3D1C1C]/50 dark:hover:border-[#ffba38]/60"
                       }`}
                     >
                       <div className="font-bold text-primary text-[10px] md:text-sm leading-tight">{plan.label}</div>
@@ -679,7 +679,7 @@ export default function ProfilePage() {
                 })}
               </div>
 
-              <div className="rounded-lg md:rounded-xl bg-surface-container-low px-3 py-2.5 md:px-5 md:py-4 text-[11px] md:text-sm text-on-surface-variant leading-snug">
+              <div className="rounded-lg md:rounded-xl border-2 border-[#B09080]/40 dark:border-[#8c7a72]/40 bg-[#EDE0D8] dark:bg-[#322522] px-3 py-2.5 md:px-5 md:py-4 text-[11px] md:text-sm text-on-surface-variant dark:text-[#c4b8b0] leading-snug">
                 <p className="font-semibold text-primary text-xs md:text-base mb-1">В подписку входит</p>
                 <p>
                   {selectedPlan.periodLabel.toLowerCase()} · безлимит · до 3 устройств · Обход LTE глушилок
@@ -689,7 +689,7 @@ export default function ProfilePage() {
                   {VPN_LOCATIONS.map((location) => (
                     <div
                       key={location.flag}
-                      className="flex flex-col items-center gap-0.5 md:gap-1 rounded-md md:rounded-lg bg-surface-container px-1 py-1 md:px-2 md:py-2 text-center"
+                      className="flex flex-col items-center gap-0.5 md:gap-1 rounded-md md:rounded-lg border border-[#B09080]/30 dark:border-[#8c7a72]/30 bg-[#DDD0C8] dark:bg-[#423431] px-1 py-1 md:px-2 md:py-2 text-center"
                     >
                       <FlagBadge name={location.flag} size="sm" />
                       <span className="text-[9px] md:text-xs leading-tight text-on-surface">{location.label}</span>
@@ -698,7 +698,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg md:rounded-xl border border-outline-variant/20 bg-surface-container-low px-3 py-2 md:px-5 md:py-4">
+              <div className="flex items-center justify-between rounded-lg md:rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#322522] px-3 py-2 md:px-5 md:py-4">
                 <span className="text-xs md:text-sm font-bold text-primary uppercase tracking-wide">К оплате</span>
                 <span className="text-xl md:text-3xl font-mono font-bold text-primary">{selectedPlan.price} ₽</span>
               </div>
