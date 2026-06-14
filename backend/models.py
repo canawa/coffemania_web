@@ -1,10 +1,20 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field
+from typing import Literal, Optional
 
 class User(BaseModel):
     email: str
     password: str
     created_at: str
+    code: str = Field(min_length=6, max_length=6)
+
+class SendCodeRequest(BaseModel):
+    email: str
+    purpose: Literal["register", "reset_password"]
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str = Field(min_length=6, max_length=6)
+    new_password: str = Field(min_length=6, max_length=128)
 
 class PaymentRequest(BaseModel):
     amount: int

@@ -18,6 +18,8 @@ from models import (
     RenewSubscriptionRequest,
     ReferralCodeRequest,
     AdminLoginRequest,
+    SendCodeRequest,
+    ResetPasswordRequest,
 )
 import jwt
 from datetime import datetime, timedelta
@@ -30,6 +32,12 @@ from vpn import (
     remnawave_user_to_subscription,
     renew_vpn_key,
     remnawave_username,
+)
+from email_service import send_verification_code
+from verification import (
+    create_and_store_code,
+    normalize_email,
+    verify_code,
 )
 
 class LoginRequest(BaseModel):
@@ -260,9 +268,10 @@ def validate_promo_for_topup(request: Request, code: str = ""):
 
 @app.post("/login")
 def login(payload: LoginRequest):
+    email = normalize_email(payload.email)
     with connect() as con:
         cursor = con.cursor()
-        cursor.execute("SELECT password FROM users WHERE email = ? LIMIT 1", (payload.email,))
+        cursor.execute("SELECT password FROM users WHERE email = ? LIMIT 1", (email,))
         user = cursor.fetchone()
 
     if not user or user[0] != payload.password:
@@ -271,7 +280,7 @@ def login(payload: LoginRequest):
             status_code=401,
         )
 
-    token = create_jwt(payload.email, "user", {})
+    token = create_jwt(email, "user", {})
     response = JSONResponse(content={"status": "Вход выполнен!"})
     response.set_cookie(key="token", value=token, **_auth_cookie_kwargs())
     return response
@@ -1138,19 +1147,102 @@ def admin_users(request: Request):
     return {"users": [dict(r) for r in rows]}
 
 
+@app.post("/auth/send-code")
+def send_code(payload: SendCodeRequest):
+    email = normalize_email(payload.email)
+    if not email or "@" not in email:
+        return JSONResponse(
+            content={"status": "error", "message": "Некорректный email"},
+            status_code=400,
+        )
+
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (email,))
+        user_exists = cur.fetchone() is not None
+
+    if payload.purpose == "register" and user_exists:
+        return JSONResponse(
+            content={"status": "error", "message": "Этот email уже зарегистрирован"},
+            status_code=400,
+        )
+
+    if payload.purpose == "reset_password" and not user_exists:
+        return JSONResponse(
+            content={"status": "error", "message": "Пользователь с таким email не найден"},
+            status_code=404,
+        )
+
+    code, create_message = create_and_store_code(email, payload.purpose)
+    if not code:
+        return JSONResponse(
+            content={"status": "error", "message": create_message},
+            status_code=429,
+        )
+
+    sent, send_message = send_verification_code(email, code, payload.purpose)
+    if not sent:
+        return JSONResponse(
+            content={"status": "error", "message": send_message},
+            status_code=503,
+        )
+
+    return {"status": "success", "message": send_message}
+
+
+@app.post("/auth/reset-password")
+def reset_password(payload: ResetPasswordRequest):
+    email = normalize_email(payload.email)
+    ok, message = verify_code(email, "reset_password", payload.code)
+    if not ok:
+        return JSONResponse(
+            content={"status": "error", "message": message},
+            status_code=400,
+        )
+
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE users SET password = ? WHERE email = ?",
+            (payload.new_password, email),
+        )
+        if cur.rowcount == 0:
+            return JSONResponse(
+                content={"status": "error", "message": "Пользователь не найден"},
+                status_code=404,
+            )
+        con.commit()
+
+    return {"status": "success", "message": "Пароль успешно изменён. Теперь можно войти."}
+
+
 @app.post("/register")
 def register(user: User):
+    email = normalize_email(user.email)
+    ok, message = verify_code(email, "register", user.code)
+    if not ok:
+        return JSONResponse(
+            content={"status": "error", "message": message},
+            status_code=400,
+        )
+
     with connect() as con:
         cursor = con.cursor()
-        cursor.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (user.email,))
+        cursor.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (email,))
         existing_user = cursor.fetchone()
 
         if existing_user:
-            return {"status": 'error', "message": "Этот email уже занят"}
+            return JSONResponse(
+                content={"status": "error", "message": "Этот email уже занят"},
+                status_code=400,
+            )
 
-        cursor.execute("INSERT INTO users (email, password, created_at) VALUES (?, ?, ?)", (user.email, user.password, user.created_at))
+        cursor.execute(
+            "INSERT INTO users (email, password, created_at) VALUES (?, ?, ?)",
+            (email, user.password, user.created_at),
+        )
         con.commit()
-    token = create_jwt(user.email, 'user', {})
-    response = JSONResponse(content={"status": "success"})
+    token = create_jwt(email, "user", {})
+    response = JSONResponse(content={"status": "success", "message": "Регистрация успешна"})
     response.set_cookie(key="token", value=token, **_auth_cookie_kwargs())
     return response

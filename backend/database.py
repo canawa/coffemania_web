@@ -67,6 +67,18 @@ def create_tables():
             created_at TEXT NOT NULL
         )
         """)
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS email_verification_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            purpose TEXT NOT NULL,
+            code_hash TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            attempts INTEGER NOT NULL DEFAULT 0,
+            used INTEGER NOT NULL DEFAULT 0
+        )
+        """)
 
         # Backward-compatible migration for existing DBs.
         cursor.execute("PRAGMA table_info(users)")

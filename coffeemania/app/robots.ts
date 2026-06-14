@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
           "/profile",
           "/referral",
           "/login",
+          "/forgot-password",
         ],
       },
     ],
