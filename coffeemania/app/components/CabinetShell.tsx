@@ -38,6 +38,9 @@ function navItemClass(active: boolean) {
     : "text-[#B09080] dark:text-[#8c7a72] px-4 py-3 flex items-center gap-3 hover:bg-[#EDE0D8] dark:hover:bg-[#423431]/50 rounded-full transition-all";
 }
 
+const logoutButtonClass =
+  "bg-[#C8B8A8] text-[#3D1C1C] dark:bg-[#423431] dark:text-[#f2e8df] hover:bg-[#ba1a1a] hover:text-[#ede0d8] dark:hover:bg-[#93000a] dark:hover:text-[#ffdad6] hover:shadow-md active:scale-95 transition-all duration-300 font-bold";
+
 export default function CabinetShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { isDark, setTheme } = useSiteTheme();
@@ -84,7 +87,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
               <button
                 onClick={() => void handleLogout()}
                 type="button"
-                className="hidden md:inline-flex bg-primary-container text-on-primary hover:bg-error-container hover:text-on-primary hover:shadow-md px-6 py-2 rounded-full font-bold active:scale-95 transition-all duration-300"
+                className={`hidden md:inline-flex px-6 py-2 rounded-full ${logoutButtonClass}`}
               >
                 Выйти
               </button>
@@ -116,7 +119,7 @@ export default function CabinetShell({ children }: { children: ReactNode }) {
                 <button
                   onClick={() => void handleLogout()}
                   type="button"
-                  className="w-full text-left px-4 py-3 rounded-xl bg-primary-container text-on-primary font-bold"
+                  className={`w-full text-left px-4 py-3 rounded-xl ${logoutButtonClass}`}
                 >
                   Выйти
                 </button>
