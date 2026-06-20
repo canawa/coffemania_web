@@ -29,7 +29,7 @@ from auth import create_jwt, verify_jwt, create_admin_jwt
 from yookassa import Configuration, Payment # для работы с Юкассой
 from vpn import (
     attach_telegram_id_to_remnawave_user,
-    fetch_remnawave_user_for_telegram,
+    fetch_telegram_bot_subscription,
     fetch_user_by_username,
     generate_vpn_key,
     remnawave_telegram_username,
@@ -212,10 +212,10 @@ async def _sync_subscription_from_remnawave(email: str) -> None:
     subscription = None
 
     if telegram_id:
-        rw_user = await fetch_remnawave_user_for_telegram(telegram_id)
-        subscription = remnawave_user_to_subscription(rw_user)
+        subscription = await fetch_telegram_bot_subscription(telegram_id)
         if subscription:
-            print(f"[sync] bot subscription for email={email} tg_id={telegram_id}")
+            rw_user = {"username": subscription.get("username")}
+            print(f"[sync] bot subscription tg_id={telegram_id} ({subscription.get('username')})")
 
     if not subscription and user_id:
         rw_user = await fetch_user_by_username(
@@ -228,7 +228,7 @@ async def _sync_subscription_from_remnawave(email: str) -> None:
 
     if not subscription:
         if telegram_id:
-            print(f"[sync] no remnawave subscription for email={email} tg_id={telegram_id}")
+            print(f"[sync] no remnawave subscription for tg_id={telegram_id} (user_{telegram_id})")
         return
 
     username = subscription.get("username")
@@ -250,34 +250,23 @@ async def _sync_subscription_from_remnawave(email: str) -> None:
 
 
 async def _reconcile_telegram_subscription(email: str, telegram_id: int) -> dict:
-    tg_user = await fetch_remnawave_user_for_telegram(telegram_id)
-    tg_subscription = remnawave_user_to_subscription(tg_user)
-    if tg_user and tg_subscription:
-        username = (
-            tg_subscription.get("username")
-            or tg_user.get("username")
-            or remnawave_telegram_username(telegram_id)
-        )
+    tg_subscription = await fetch_telegram_bot_subscription(telegram_id)
+    if tg_subscription:
+        username = tg_subscription.get("username") or remnawave_telegram_username(telegram_id)
         _upsert_vpn_key_from_remnawave(
             email,
             username,
             tg_subscription["subscription_url"],
             tg_subscription.get("expires_at"),
         )
-        print(f"[telegram] imported bot subscription for email={email} tg_id={telegram_id}")
+        print(f"[telegram] imported bot subscription tg_id={telegram_id} ({username})")
         return {
             "link_action": "imported_from_bot",
             "subscription_synced": True,
             "message": "Telegram подключён, подписка из бота синхронизирована",
         }
 
-    if tg_user:
-        print(
-            f"[telegram] remnawave user found for tg_id={telegram_id} "
-            f"but subscription url missing for email={email}",
-        )
-    else:
-        print(f"[telegram] no remnawave user for tg_id={telegram_id} email={email}")
+    print(f"[telegram] no bot subscription for tg_id={telegram_id} (user_{telegram_id})")
 
     user_id = _get_user_id_by_email(email)
     web_user = None

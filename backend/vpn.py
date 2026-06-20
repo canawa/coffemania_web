@@ -1,11 +1,11 @@
+import asyncio
 import os
-import socket
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-import aiohttp
 import dotenv
+import requests
 
 from network import prefer_ipv4
 
@@ -48,6 +48,10 @@ def _unwrap_remnawave_response(data: Any) -> dict | None:
     return data
 
 
+def _public_remnawave_base() -> str | None:
+    return (REMNAWAVE_BASE_URL or "").rstrip("/") or None
+
+
 def _extract_subscription_url(user_info: Any) -> str | None:
     if not isinstance(user_info, dict):
         return None
@@ -63,8 +67,12 @@ def _extract_subscription_url(user_info: Any) -> str | None:
     if isinstance(links, str) and links.strip():
         return links.strip()
     token = user_info.get("subscriptionToken") or user_info.get("subscription_token")
-    if isinstance(token, str) and token.strip() and REMNAWAVE_BASE_URL:
-        return f"{REMNAWAVE_BASE_URL.rstrip('/')}/sub/{token.strip()}"
+    public_base = _public_remnawave_base()
+    if isinstance(token, str) and token.strip() and public_base:
+        return f"{public_base}/sub/{token.strip()}"
+    short_uuid = user_info.get("shortUuid") or user_info.get("short_uuid")
+    if isinstance(short_uuid, str) and short_uuid.strip() and public_base:
+        return f"{public_base}/sub/{short_uuid.strip()}"
     return None
 
 
@@ -120,14 +128,60 @@ async def fetch_user_by_telegram_id(telegram_id: int, *, quiet_not_found: bool =
 
 
 async def fetch_remnawave_user_for_telegram(telegram_id: int) -> dict | None:
-    """Bot users: telegramId field and/or username user_{telegram_id}."""
-    user = await fetch_user_by_telegram_id(telegram_id, quiet_not_found=True)
+    """Bot users in Remnawave: username user_{telegram_id}."""
+    username = remnawave_telegram_username(telegram_id)
+    user = await fetch_user_by_username(username, quiet_not_found=True)
     if user:
         return user
-    return await fetch_user_by_username(
-        remnawave_telegram_username(telegram_id),
-        quiet_not_found=True,
+    return await fetch_user_by_telegram_id(telegram_id, quiet_not_found=True)
+
+
+async def fetch_telegram_bot_subscription(telegram_id: int) -> dict | None:
+    username = remnawave_telegram_username(telegram_id)
+    user = await fetch_remnawave_user_for_telegram(telegram_id)
+
+    if user:
+        subscription = remnawave_user_to_subscription(user)
+        if subscription:
+            subscription["username"] = subscription.get("username") or username
+            return subscription
+        print(
+            f"[remnawave] user {username} found but subscription url missing, "
+            f"keys={sorted(user.keys())}",
+        )
+
+    data, status, error_text = await _request_json(
+        "GET",
+        f"/api/subscriptions/by-username/{username}",
     )
+    if status >= 400:
+        if status == 404:
+            print(f"[remnawave] no user/subscription for tg_id={telegram_id} ({username})")
+        else:
+            print(
+                f"[remnawave] subscriptions lookup failed for {username}: "
+                f"{status} | {error_text}",
+            )
+        return None
+
+    unwrapped = _unwrap_remnawave_response(data) if isinstance(data, dict) else None
+    if not unwrapped:
+        return None
+
+    sub_url = _extract_subscription_url(unwrapped)
+    if not sub_url:
+        print(
+            f"[remnawave] subscription payload for {username} has no url, "
+            f"keys={sorted(unwrapped.keys())}",
+        )
+        return None
+
+    return {
+        "username": username,
+        "subscription_url": sub_url,
+        "expires_at": unwrapped.get("expireAt") or unwrapped.get("expire_at"),
+        "status": unwrapped.get("status"),
+    }
 
 
 async def attach_telegram_id_to_remnawave_user(
@@ -193,6 +247,30 @@ def remnawave_user_to_subscription(user: dict | None) -> dict | None:
     }
 
 
+def _request_json_sync(
+    method: str,
+    url: str,
+    headers: dict[str, str],
+    payload: dict[str, Any] | None,
+) -> tuple[Any, int, str]:
+    try:
+        response = requests.request(
+            method,
+            url,
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+        try:
+            data = response.json()
+        except Exception:
+            data = None
+        return data, response.status_code, response.text
+    except requests.RequestException as exc:
+        print(f"remnawave request error: {type(exc).__name__}: {exc!r}")
+        return None, 500, str(exc) or type(exc).__name__
+
+
 async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | None = None):
     headers = _build_headers()
     if headers is None:
@@ -201,25 +279,7 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
     if not api_base:
         return None, 500, "Remnawave не настроен: проверьте REMNAWAVE_BASE_URL и REMNAWAVE_TOKEN"
     url = f"{api_base}{endpoint}"
-    connector = aiohttp.TCPConnector(family=socket.AF_INET)
-    try:
-        async with aiohttp.ClientSession(connector=connector) as session:
-            async with session.request(
-                method,
-                url,
-                headers=headers,
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
-                try:
-                    data = await resp.json()
-                except Exception:
-                    data = None
-                text = await resp.text()
-                return data, resp.status, text
-    except Exception as e:
-        print(f"remnawave request error: {type(e).__name__}: {e!r}")
-        return None, 500, str(e) or type(e).__name__
+    return await asyncio.to_thread(_request_json_sync, method, url, headers, payload)
 
 
 def _user_already_exists_error(error_text: str) -> bool:
