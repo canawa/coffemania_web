@@ -4,6 +4,7 @@ export const SITE_URL = "https://coffeemaniavpn.ru";
 export const SITE_NAME = "КОФЕМАНИЯ ВПН";
 export const SITE_LOCALE = "ru_RU";
 export const SUPPORT_TELEGRAM = "@coffeemaniasup2";
+export const TELEGRAM_BOT_URL = "https://t.me/coffemaniaVPNbot";
 
 export const DEFAULT_DESCRIPTION =
   "Быстрый и стабильный VPN по цене чашки кофе: серверы в Европе и России, обход блокировок, оплата за минуту, личный кабинет и поддержка 24/7.";

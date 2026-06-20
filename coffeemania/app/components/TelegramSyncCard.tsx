@@ -5,6 +5,7 @@ import TelegramLoginButton from "@/app/components/TelegramLoginButton";
 import { PROFILE_ROUTE_REFRESH } from "@/app/components/ProfileRouteRefresh";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import type { TelegramAuthResult } from "@/lib/telegram";
+import { TELEGRAM_BOT_URL } from "@/lib/seo";
 
 type TelegramStatus = {
   linked: boolean;
@@ -103,26 +104,37 @@ export default function TelegramSyncCard() {
       {isLoading ? (
         <p className="text-sm text-on-surface-variant">Загружаем статус…</p>
       ) : status?.linked ? (
-        <div className="flex items-center gap-3">
-          {status.telegram_photo_url ? (
-            <img
-              src={status.telegram_photo_url}
-              alt=""
-              className="w-12 h-12 rounded-full object-cover border border-outline-variant/30"
-            />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-2xl text-primary">person</span>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {status.telegram_photo_url ? (
+              <img
+                src={status.telegram_photo_url}
+                alt=""
+                className="w-12 h-12 rounded-full object-cover border border-outline-variant/30 shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-2xl text-primary">person</span>
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-semibold text-primary truncate">
+                {status.telegram_name || "Telegram подключён"}
+              </p>
+              {status.telegram_username ? (
+                <p className="text-sm text-on-surface-variant truncate">@{status.telegram_username}</p>
+              ) : null}
             </div>
-          )}
-          <div className="min-w-0">
-            <p className="font-semibold text-primary truncate">
-              {status.telegram_name || "Telegram подключён"}
-            </p>
-            {status.telegram_username ? (
-              <p className="text-sm text-on-surface-variant truncate">@{status.telegram_username}</p>
-            ) : null}
           </div>
+          <a
+            href={TELEGRAM_BOT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-on-primary hover:opacity-90 transition-opacity shrink-0 w-full sm:w-auto"
+          >
+            <span className="material-symbols-outlined text-[18px]">send</span>
+            Управлять подпиской в боте
+          </a>
         </div>
       ) : (
         <>
