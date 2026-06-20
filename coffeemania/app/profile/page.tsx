@@ -589,25 +589,25 @@ export default function ProfilePage() {
                               onClick={(e) => {
                                 if (!isLinkHidden) e.currentTarget.select();
                               }}
-                              className="w-full rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#423431] px-4 py-3 pr-16 text-sm font-mono text-primary dark:text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-[#B09080]/30 dark:focus:ring-tertiary-fixed/40"
+                              className="w-full rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#423431] px-4 py-3 pr-14 text-sm font-mono text-primary dark:text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-[#B09080]/30 dark:focus:ring-tertiary-fixed/40"
                             />
-                            <div className="absolute right-2 top-2 flex flex-col gap-1">
+                            <div className="absolute right-1.5 top-1.5 flex items-center gap-0.5">
                               <button
                                 type="button"
                                 onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
-                                className="p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
+                                className="p-1 rounded-md bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
                                 title="Скопировать"
                               >
-                                <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                                <span className="material-symbols-outlined text-[15px] leading-none">content_copy</span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => toggleSubscriptionLinkVisibility(k.id)}
-                                className="p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
+                                className="p-1 rounded-md bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
                                 title={isLinkHidden ? "Показать ссылку" : "Скрыть ссылку"}
                                 aria-pressed={isLinkHidden}
                               >
-                                <span className="material-symbols-outlined text-[20px]">
+                                <span className="material-symbols-outlined text-[15px] leading-none">
                                   {isLinkHidden ? "visibility_off" : "visibility"}
                                 </span>
                               </button>
