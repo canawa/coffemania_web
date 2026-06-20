@@ -54,32 +54,32 @@ def _write_jwks_cache(data: dict) -> None:
     JWKS_CACHE_PATH.write_text(json.dumps(data), encoding="utf-8")
 
 
-def _fetch_jwks_json() -> dict:
-    response = requests.get(TELEGRAM_JWKS_URL, timeout=20)
-    response.raise_for_status()
-    data = response.json()
-    if not isinstance(data, dict):
-        raise ValueError("JWKS response is not an object")
-    return data
-
-
 def _load_jwks_from_sources() -> PyJWKSet:
+    local_data = _parse_jwks_file(JWKS_CACHE_PATH) or _parse_jwks_file(BUNDLED_JWKS_PATH)
+
+    if local_data is not None:
+        try:
+            response = requests.get(TELEGRAM_JWKS_URL, timeout=2)
+            response.raise_for_status()
+            fresh = response.json()
+            if isinstance(fresh, dict):
+                _write_jwks_cache(fresh)
+                return PyJWKSet.from_dict(fresh)
+        except requests.RequestException:
+            pass
+        return PyJWKSet.from_dict(local_data)
+
     try:
-        data = _fetch_jwks_json()
-        _write_jwks_cache(data)
-        return PyJWKSet.from_dict(data)
+        response = requests.get(TELEGRAM_JWKS_URL, timeout=10)
+        response.raise_for_status()
+        fresh = response.json()
+        if not isinstance(fresh, dict):
+            raise ConnectionError("Некорректный ответ JWKS от Telegram")
+        _write_jwks_cache(fresh)
+        return PyJWKSet.from_dict(fresh)
     except requests.RequestException as exc:
-        for source, path in (
-            ("cache", JWKS_CACHE_PATH),
-            ("bundled", BUNDLED_JWKS_PATH),
-        ):
-            data = _parse_jwks_file(path)
-            if data is not None:
-                print(f"[telegram] JWKS online fetch failed, using {source}: {exc}")
-                return PyJWKSet.from_dict(data)
         raise ConnectionError(
-            "Не удалось загрузить ключи Telegram. Обновите backend/telegram_jwks.json "
-            "или проверьте доступ к oauth.telegram.org из контейнера."
+            "Не удалось загрузить ключи Telegram. Обновите backend/telegram_jwks.json."
         ) from exc
 
 
