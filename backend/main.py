@@ -206,26 +206,38 @@ def _upsert_vpn_key_from_remnawave(
 
 async def _sync_subscription_from_remnawave(email: str) -> None:
     user_id = _get_user_id_by_email(email)
-    if not user_id:
-        return
+    telegram_id = _get_telegram_id_by_email(email)
 
-    rw_user = await fetch_user_by_username(remnawave_username(user_id), quiet_not_found=True)
-    subscription = remnawave_user_to_subscription(rw_user)
+    rw_user = None
+    subscription = None
+
+    if telegram_id:
+        rw_user = await fetch_remnawave_user_for_telegram(telegram_id)
+        subscription = remnawave_user_to_subscription(rw_user)
+        if subscription:
+            print(f"[sync] bot subscription for email={email} tg_id={telegram_id}")
+
+    if not subscription and user_id:
+        rw_user = await fetch_user_by_username(
+            remnawave_username(user_id),
+            quiet_not_found=True,
+        )
+        subscription = remnawave_user_to_subscription(rw_user)
+        if subscription:
+            print(f"[sync] web subscription for email={email} user_id={user_id}")
 
     if not subscription:
-        telegram_id = _get_telegram_id_by_email(email)
         if telegram_id:
-            rw_user = await fetch_remnawave_user_for_telegram(telegram_id)
-            subscription = remnawave_user_to_subscription(rw_user)
-
-    if not subscription:
+            print(f"[sync] no remnawave subscription for email={email} tg_id={telegram_id}")
         return
 
-    username = subscription.get("username") or (
-        remnawave_username(user_id) if user_id else None
-    )
+    username = subscription.get("username")
     if not username and rw_user:
         username = rw_user.get("username")
+    if not username and telegram_id:
+        username = remnawave_telegram_username(telegram_id)
+    if not username and user_id:
+        username = remnawave_username(user_id)
     if not username:
         return
 
