@@ -29,6 +29,7 @@ def _env_first(*keys: str):
 
 
 REMNAWAVE_BASE_URL = _env_first("REMNAWAVE_BASE_URL")
+REMNAWAVE_API_BASE_URL = _env_first("REMNAWAVE_INTERNAL_BASE_URL", "REMNAWAVE_BASE_URL")
 REMNAWAVE_TOKEN = _env_first("REMNAWAVE_TOKEN")
 REMNAWAVE_INTERNAL_SQUAD_ID = _env_first("REMNAWAVE_INTERNAL_SQUAD_ID")
 TRAFFIC_LIMIT_BYTES_25_GB = 25 * 1024 * 1024 * 1024
@@ -196,7 +197,10 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
     headers = _build_headers()
     if headers is None:
         return None, 500, "Remnawave не настроен: проверьте REMNAWAVE_BASE_URL и REMNAWAVE_TOKEN"
-    url = f"{REMNAWAVE_BASE_URL.rstrip('/')}{endpoint}"
+    api_base = (REMNAWAVE_API_BASE_URL or REMNAWAVE_BASE_URL or "").rstrip("/")
+    if not api_base:
+        return None, 500, "Remnawave не настроен: проверьте REMNAWAVE_BASE_URL и REMNAWAVE_TOKEN"
+    url = f"{api_base}{endpoint}"
     connector = aiohttp.TCPConnector(family=socket.AF_INET)
     try:
         async with aiohttp.ClientSession(connector=connector) as session:
@@ -205,7 +209,7 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
                 url,
                 headers=headers,
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=15),
+                timeout=aiohttp.ClientTimeout(total=30),
             ) as resp:
                 try:
                     data = await resp.json()
