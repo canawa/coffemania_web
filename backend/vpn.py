@@ -1,10 +1,15 @@
 import os
+import socket
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import aiohttp
 import dotenv
+
+from network import prefer_ipv4
+
+prefer_ipv4()
 
 dotenv_path = Path(__file__).with_name(".env.production")
 fallback_dotenv_path = Path(__file__).with_name(".env")
@@ -192,8 +197,9 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
     if headers is None:
         return None, 500, "Remnawave не настроен: проверьте REMNAWAVE_BASE_URL и REMNAWAVE_TOKEN"
     url = f"{REMNAWAVE_BASE_URL.rstrip('/')}{endpoint}"
+    connector = aiohttp.TCPConnector(family=socket.AF_INET)
     try:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.request(
                 method,
                 url,
@@ -208,8 +214,8 @@ async def _request_json(method: str, endpoint: str, payload: dict[str, Any] | No
                 text = await resp.text()
                 return data, resp.status, text
     except Exception as e:
-        print(f"remnawave request error: {e}")
-        return None, 500, str(e)
+        print(f"remnawave request error: {type(e).__name__}: {e!r}")
+        return None, 500, str(e) or type(e).__name__
 
 
 def _user_already_exists_error(error_text: str) -> bool:

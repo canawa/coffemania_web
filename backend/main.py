@@ -425,6 +425,15 @@ async def telegram_link(request: Request, body: TelegramLinkRequest):
     try:
         token_payload = verify_telegram_id_token(body.id_token.strip())
         profile = extract_telegram_profile(token_payload)
+    except ConnectionError as exc:
+        print(f"[telegram] link verify failed: {exc}")
+        return JSONResponse(
+            content={
+                "status": "error",
+                "message": "Сервер не может связаться с Telegram. Попробуйте позже или напишите в поддержку.",
+            },
+            status_code=503,
+        )
     except Exception as exc:
         print(f"[telegram] link verify failed: {exc}")
         return JSONResponse(

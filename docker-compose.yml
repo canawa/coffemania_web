@@ -8,6 +8,9 @@ services:
     environment:
       DATABASE_PATH: /app/data/database.db
       TELEGRAM_CLIENT_ID: ${TELEGRAM_CLIENT_ID:-7964141443}
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     volumes:
       - ./backend/data:/app/data
     expose:

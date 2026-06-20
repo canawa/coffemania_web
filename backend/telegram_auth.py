@@ -3,8 +3,13 @@ from functools import lru_cache
 from pathlib import Path
 
 import jwt
+import requests
 from dotenv import load_dotenv
-from jwt import PyJWKClient
+from jwt import PyJWKSet
+
+from network import prefer_ipv4
+
+prefer_ipv4()
 
 dotenv_path = Path(__file__).with_name(".env.production")
 fallback_dotenv_path = Path(__file__).with_name(".env")
@@ -20,8 +25,10 @@ TELEGRAM_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json"
 
 
 @lru_cache(maxsize=1)
-def _jwks_client() -> PyJWKClient:
-    return PyJWKClient(TELEGRAM_JWKS_URL, cache_keys=True)
+def _load_jwks() -> PyJWKSet:
+    response = requests.get(TELEGRAM_JWKS_URL, timeout=15)
+    response.raise_for_status()
+    return PyJWKSet.from_dict(response.json())
 
 
 def _telegram_audiences() -> list[str | int]:
@@ -35,7 +42,20 @@ def verify_telegram_id_token(id_token: str) -> dict:
     if not TELEGRAM_CLIENT_ID:
         raise ValueError("TELEGRAM_CLIENT_ID не настроен")
 
-    signing_key = _jwks_client().get_signing_key_from_jwt(id_token)
+    header = jwt.get_unverified_header(id_token)
+    kid = header.get("kid")
+    if not kid:
+        raise ValueError("JWT без kid")
+
+    try:
+        signing_key = _load_jwks()[kid]
+    except (KeyError, requests.RequestException) as exc:
+        _load_jwks.cache_clear()
+        raise ConnectionError(
+            "Не удалось загрузить ключи Telegram (oauth.telegram.org). "
+            "Проверьте интернет/DNS в контейнере backend."
+        ) from exc
+
     payload = jwt.decode(
         id_token,
         signing_key.key,
