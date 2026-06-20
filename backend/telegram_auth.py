@@ -23,16 +23,27 @@ if dotenv_path.exists():
 TELEGRAM_CLIENT_ID = os.getenv("TELEGRAM_CLIENT_ID", "7964141443").strip()
 TELEGRAM_ISSUER = "https://oauth.telegram.org"
 TELEGRAM_JWKS_URL = "https://oauth.telegram.org/.well-known/jwks.json"
+TELEGRAM_JWT_ALGORITHMS = [
+    "RS256",
+    "RS384",
+    "RS512",
+    "ES256",
+    "ES384",
+    "ES256K",
+    "PS256",
+    "EdDSA",
+]
 
+BUNDLED_JWKS_PATH = Path(__file__).with_name("telegram_jwks.json")
 _db_path = Path(os.getenv("DATABASE_PATH", "database.db"))
 JWKS_CACHE_PATH = _db_path.parent / "telegram_jwks.json"
 
 
-def _read_jwks_cache() -> dict | None:
+def _parse_jwks_file(path: Path) -> dict | None:
     try:
-        if not JWKS_CACHE_PATH.is_file():
+        if not path.is_file():
             return None
-        data = json.loads(JWKS_CACHE_PATH.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else None
     except Exception:
         return None
@@ -52,22 +63,29 @@ def _fetch_jwks_json() -> dict:
     return data
 
 
-@lru_cache(maxsize=1)
-def _load_jwks_cached() -> PyJWKSet:
+def _load_jwks_from_sources() -> PyJWKSet:
     try:
         data = _fetch_jwks_json()
         _write_jwks_cache(data)
         return PyJWKSet.from_dict(data)
     except requests.RequestException as exc:
-        cached = _read_jwks_cache()
-        if cached is not None:
-            print(f"[telegram] JWKS online fetch failed, using cache: {exc}")
-            return PyJWKSet.from_dict(cached)
+        for source, path in (
+            ("cache", JWKS_CACHE_PATH),
+            ("bundled", BUNDLED_JWKS_PATH),
+        ):
+            data = _parse_jwks_file(path)
+            if data is not None:
+                print(f"[telegram] JWKS online fetch failed, using {source}: {exc}")
+                return PyJWKSet.from_dict(data)
         raise ConnectionError(
-            "Не удалось загрузить ключи Telegram (oauth.telegram.org). "
-            "Проверьте интернет/DNS в контейнере backend или положите "
-            f"telegram_jwks.json в {JWKS_CACHE_PATH.parent}/"
+            "Не удалось загрузить ключи Telegram. Обновите backend/telegram_jwks.json "
+            "или проверьте доступ к oauth.telegram.org из контейнера."
         ) from exc
+
+
+@lru_cache(maxsize=1)
+def _load_jwks_cached() -> PyJWKSet:
+    return _load_jwks_from_sources()
 
 
 def _load_jwks(force_refresh: bool = False) -> PyJWKSet:
@@ -100,14 +118,13 @@ def verify_telegram_id_token(id_token: str) -> dict:
         raise
     except requests.RequestException as exc:
         raise ConnectionError(
-            "Не удалось загрузить ключи Telegram (oauth.telegram.org). "
-            "Проверьте интернет/DNS в контейнере backend."
+            "Не удалось загрузить ключи Telegram. Обновите backend/telegram_jwks.json."
         ) from exc
 
     payload = jwt.decode(
         id_token,
         signing_key.key,
-        algorithms=["RS256", "RS384", "RS512", "ES256", "ES384", "PS256"],
+        algorithms=TELEGRAM_JWT_ALGORITHMS,
         audience=_telegram_audiences(),
         issuer=TELEGRAM_ISSUER,
         options={"require": ["exp", "iat", "sub"]},
