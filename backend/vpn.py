@@ -56,6 +56,9 @@ def _extract_subscription_url(user_info: Any) -> str | None:
                 return link.strip()
     if isinstance(links, str) and links.strip():
         return links.strip()
+    token = user_info.get("subscriptionToken") or user_info.get("subscription_token")
+    if isinstance(token, str) and token.strip() and REMNAWAVE_BASE_URL:
+        return f"{REMNAWAVE_BASE_URL.rstrip('/')}/sub/{token.strip()}"
     return None
 
 
@@ -70,6 +73,10 @@ def _build_headers() -> dict[str, str] | None:
 
 def remnawave_username(user_id: int) -> str:
     return f"web_{user_id}"
+
+
+def remnawave_telegram_username(telegram_id: int) -> str:
+    return f"user_{telegram_id}"
 
 
 def _build_user_payload(
@@ -94,16 +101,27 @@ def _build_user_payload(
     return payload
 
 
-async def fetch_user_by_telegram_id(telegram_id: int) -> dict | None:
+async def fetch_user_by_telegram_id(telegram_id: int, *, quiet_not_found: bool = False) -> dict | None:
     data, status, error_text = await _request_json(
         "GET",
         f"/api/users/by-telegram-id/{telegram_id}",
     )
     if status >= 400 or not isinstance(data, dict):
-        if status >= 400 and status != 404:
+        if status >= 400 and not (quiet_not_found and status == 404):
             print(f"remnawave fetch by telegram id failed: {status} | {error_text}")
         return None
     return _unwrap_remnawave_response(data)
+
+
+async def fetch_remnawave_user_for_telegram(telegram_id: int) -> dict | None:
+    """Bot users: telegramId field and/or username user_{telegram_id}."""
+    user = await fetch_user_by_telegram_id(telegram_id, quiet_not_found=True)
+    if user:
+        return user
+    return await fetch_user_by_username(
+        remnawave_telegram_username(telegram_id),
+        quiet_not_found=True,
+    )
 
 
 async def attach_telegram_id_to_remnawave_user(
@@ -143,13 +161,13 @@ async def attach_telegram_id_to_remnawave_user(
     return True
 
 
-async def fetch_user_by_username(username: str) -> dict | None:
+async def fetch_user_by_username(username: str, *, quiet_not_found: bool = False) -> dict | None:
     data, status, error_text = await _request_json(
         "GET",
         f"/api/users/by-username/{username}",
     )
     if status >= 400 or not isinstance(data, dict):
-        if status >= 400:
+        if status >= 400 and not (quiet_not_found and status == 404):
             print(f"remnawave fetch user failed: {status} | {error_text}")
         return None
     return _unwrap_remnawave_response(data)
