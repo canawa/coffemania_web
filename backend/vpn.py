@@ -30,6 +30,7 @@ def _env_first(*keys: str):
 
 REMNAWAVE_BASE_URL = _env_first("REMNAWAVE_BASE_URL")
 REMNAWAVE_API_BASE_URL = _env_first("REMNAWAVE_INTERNAL_BASE_URL", "REMNAWAVE_BASE_URL")
+REMNAWAVE_SUBSCRIPTION_BASE_URL = _env_first("REMNAWAVE_SUBSCRIPTION_BASE_URL")
 REMNAWAVE_TOKEN = _env_first("REMNAWAVE_TOKEN")
 REMNAWAVE_INTERNAL_SQUAD_ID = _env_first("REMNAWAVE_INTERNAL_SQUAD_ID")
 TRAFFIC_LIMIT_BYTES_25_GB = 25 * 1024 * 1024 * 1024
@@ -46,6 +47,47 @@ def _unwrap_remnawave_response(data: Any) -> dict | None:
     if isinstance(nested, dict):
         return nested
     return data
+
+
+def _unwrap_remnawave_user(data: Any) -> dict | None:
+    if isinstance(data, list):
+        for item in data:
+            if isinstance(item, dict):
+                return item
+        return None
+
+    if not isinstance(data, dict):
+        return None
+
+    for key in ("response", "data"):
+        nested = data.get(key)
+        if isinstance(nested, list) and nested:
+            first = nested[0]
+            if isinstance(first, dict):
+                return first
+        if isinstance(nested, dict):
+            if any(
+                nested.get(field)
+                for field in ("username", "uuid", "subscription_url", "subscriptionUrl", "shortUuid", "short_uuid")
+            ):
+                return nested
+
+    if any(
+        data.get(field)
+        for field in ("username", "uuid", "subscription_url", "subscriptionUrl", "shortUuid", "short_uuid")
+    ):
+        return data
+
+    return _unwrap_remnawave_response(data)
+
+
+def _subscription_public_base() -> str | None:
+    if REMNAWAVE_SUBSCRIPTION_BASE_URL:
+        return REMNAWAVE_SUBSCRIPTION_BASE_URL.rstrip("/")
+    panel = REMNAWAVE_BASE_URL or ""
+    if "panel." in panel:
+        return panel.replace("panel.", "sub.", 1).rstrip("/")
+    return _public_remnawave_base()
 
 
 def _public_remnawave_base() -> str | None:
@@ -67,12 +109,13 @@ def _extract_subscription_url(user_info: Any) -> str | None:
     if isinstance(links, str) and links.strip():
         return links.strip()
     token = user_info.get("subscriptionToken") or user_info.get("subscription_token")
-    public_base = _public_remnawave_base()
-    if isinstance(token, str) and token.strip() and public_base:
-        return f"{public_base}/sub/{token.strip()}"
+    panel_base = _public_remnawave_base()
+    if isinstance(token, str) and token.strip() and panel_base:
+        return f"{panel_base}/sub/{token.strip()}"
     short_uuid = user_info.get("shortUuid") or user_info.get("short_uuid")
-    if isinstance(short_uuid, str) and short_uuid.strip() and public_base:
-        return f"{public_base}/sub/{short_uuid.strip()}"
+    sub_base = _subscription_public_base()
+    if isinstance(short_uuid, str) and short_uuid.strip() and sub_base:
+        return f"{sub_base}/{short_uuid.strip()}"
     return None
 
 
@@ -120,11 +163,14 @@ async def fetch_user_by_telegram_id(telegram_id: int, *, quiet_not_found: bool =
         "GET",
         f"/api/users/by-telegram-id/{telegram_id}",
     )
-    if status >= 400 or not isinstance(data, dict):
-        if status >= 400 and not (quiet_not_found and status == 404):
-            print(f"remnawave fetch by telegram id failed: {status} | {error_text}")
+    if status >= 400:
+        if not (quiet_not_found and status == 404):
+            print(f"remnawave fetch by telegram id failed: {status} | {error_text[:300]}")
         return None
-    return _unwrap_remnawave_response(data)
+    user = _unwrap_remnawave_user(data)
+    if not user:
+        print(f"remnawave fetch by telegram id parse failed for tg_id={telegram_id}")
+    return user
 
 
 async def fetch_remnawave_user_for_telegram(telegram_id: int) -> dict | None:
@@ -138,17 +184,42 @@ async def fetch_remnawave_user_for_telegram(telegram_id: int) -> dict | None:
 
 async def fetch_telegram_bot_subscription(telegram_id: int) -> dict | None:
     username = remnawave_telegram_username(telegram_id)
-    user = await fetch_remnawave_user_for_telegram(telegram_id)
+    api_base = (REMNAWAVE_API_BASE_URL or REMNAWAVE_BASE_URL or "").rstrip("/")
 
-    if user:
-        subscription = remnawave_user_to_subscription(user)
-        if subscription:
-            subscription["username"] = subscription.get("username") or username
-            return subscription
+    data, status, error_text = await _request_json(
+        "GET",
+        f"/api/users/by-username/{username}",
+    )
+    if status == 200:
+        user = _unwrap_remnawave_user(data)
+        if user:
+            subscription = remnawave_user_to_subscription(user)
+            if subscription:
+                subscription["username"] = subscription.get("username") or username
+                return subscription
+            print(
+                f"[remnawave] user {username} found but subscription url missing, "
+                f"keys={sorted(user.keys())}",
+            )
+    elif status == 404:
+        print(f"[remnawave] user {username} not found (404), api={api_base}")
+    else:
         print(
-            f"[remnawave] user {username} found but subscription url missing, "
-            f"keys={sorted(user.keys())}",
+            f"[remnawave] user lookup failed for {username}: {status} | {error_text[:300]} "
+            f"(api={api_base})",
         )
+
+    tg_data, tg_status, tg_error = await _request_json(
+        "GET",
+        f"/api/users/by-telegram-id/{telegram_id}",
+    )
+    if tg_status == 200:
+        tg_user = _unwrap_remnawave_user(tg_data)
+        if tg_user:
+            subscription = remnawave_user_to_subscription(tg_user)
+            if subscription:
+                subscription["username"] = subscription.get("username") or tg_user.get("username") or username
+                return subscription
 
     data, status, error_text = await _request_json(
         "GET",
@@ -156,16 +227,17 @@ async def fetch_telegram_bot_subscription(telegram_id: int) -> dict | None:
     )
     if status >= 400:
         if status == 404:
-            print(f"[remnawave] no user/subscription for tg_id={telegram_id} ({username})")
+            print(f"[remnawave] no subscription for tg_id={telegram_id} ({username})")
         else:
             print(
                 f"[remnawave] subscriptions lookup failed for {username}: "
-                f"{status} | {error_text}",
+                f"{status} | {error_text[:300]}",
             )
         return None
 
-    unwrapped = _unwrap_remnawave_response(data) if isinstance(data, dict) else None
+    unwrapped = _unwrap_remnawave_user(data)
     if not unwrapped:
+        print(f"[remnawave] subscription parse failed for {username}")
         return None
 
     sub_url = _extract_subscription_url(unwrapped)
@@ -226,11 +298,11 @@ async def fetch_user_by_username(username: str, *, quiet_not_found: bool = False
         "GET",
         f"/api/users/by-username/{username}",
     )
-    if status >= 400 or not isinstance(data, dict):
-        if status >= 400 and not (quiet_not_found and status == 404):
-            print(f"remnawave fetch user failed: {status} | {error_text}")
+    if status >= 400:
+        if not (quiet_not_found and status == 404):
+            print(f"remnawave fetch user failed: {status} | {error_text[:300]}")
         return None
-    return _unwrap_remnawave_response(data)
+    return _unwrap_remnawave_user(data)
 
 
 def remnawave_user_to_subscription(user: dict | None) -> dict | None:
