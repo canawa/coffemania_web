@@ -67,11 +67,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className="light h-full antialiased" suppressHydrationWarning>
+    <html lang="ru" className="dark h-full antialiased" suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("cabinet-theme");var d=t==="dark";document.documentElement.classList.toggle("dark",d);document.documentElement.classList.toggle("light",!d);}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem("cabinet-theme");var d=t!=="light";document.documentElement.classList.toggle("dark",d);document.documentElement.classList.toggle("light",!d);}catch(e){document.documentElement.classList.add("dark");document.documentElement.classList.remove("light");}})();`,
           }}
         />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

@@ -8,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
       "Быстрый и удобный VPN-сервис: регистрация, оплата подписки и подключение за пару минут.",
     start_url: "/",
     display: "standalone",
-    background_color: "#EDE0D8",
-    theme_color: "#3D1C1C",
+    background_color: "#1a1110",
+    theme_color: "#1a1110",
     icons: [
       {
         src: "/logo.svg",

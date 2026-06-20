@@ -63,6 +63,7 @@ export default function ProfilePage() {
     expires_at?: string | null;
   }>({ active: false, subscription_url: null });
   const [copyToast, setCopyToast] = useState<string | null>(null);
+  const [hiddenSubscriptionLinks, setHiddenSubscriptionLinks] = useState<Record<number, boolean>>({});
   const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanId>("1m");
   const selectedPlan = getPlanById(selectedPlanId);
   const [paymentVerifyState, setPaymentVerifyState] = useState<"idle" | "pending" | "error">("idle");
@@ -245,6 +246,12 @@ export default function ProfilePage() {
     el?.select();
     await copyToClipboard(link);
   };
+
+  const toggleSubscriptionLinkVisibility = (id: number) => {
+    setHiddenSubscriptionLinks((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const maskSubscriptionLink = (link: string) => "•".repeat(Math.min(Math.max(link.length, 24), 48));
 
   const getSubscription = async () => {
     const res = await apiFetch(`${API_BASE_URL}/subscription`, {
@@ -522,6 +529,7 @@ export default function ProfilePage() {
                 {vpnKeys.map((k) => {
                   const expired = isExpired(k.expires_at);
                   const linkFieldId = `subscription-link-${k.id}`;
+                  const isLinkHidden = Boolean(hiddenSubscriptionLinks[k.id]);
                   return (
                     <div
                       key={k.id}
@@ -573,20 +581,37 @@ export default function ProfilePage() {
                             <textarea
                               id={linkFieldId}
                               readOnly
-                              value={k.vpn_key}
+                              value={isLinkHidden ? maskSubscriptionLink(k.vpn_key) : k.vpn_key}
                               rows={3}
-                              onFocus={(e) => e.target.select()}
-                              onClick={(e) => e.currentTarget.select()}
-                              className="w-full rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#423431] px-4 py-3 pr-12 text-sm font-mono text-primary dark:text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-[#B09080]/30 dark:focus:ring-tertiary-fixed/40"
+                              onFocus={(e) => {
+                                if (!isLinkHidden) e.target.select();
+                              }}
+                              onClick={(e) => {
+                                if (!isLinkHidden) e.currentTarget.select();
+                              }}
+                              className="w-full rounded-xl border-2 border-[#B09080]/50 dark:border-[#8c7a72]/50 bg-[#EDE0D8] dark:bg-[#423431] px-4 py-3 pr-16 text-sm font-mono text-primary dark:text-on-surface resize-none focus:outline-none focus:ring-2 focus:ring-[#B09080]/30 dark:focus:ring-tertiary-fixed/40"
                             />
-                            <button
-                              type="button"
-                              onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
-                              className="absolute right-2 top-2 p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
-                              title="Скопировать"
-                            >
-                              <span className="material-symbols-outlined text-[20px]">content_copy</span>
-                            </button>
+                            <div className="absolute right-2 top-2 flex flex-col gap-1">
+                              <button
+                                type="button"
+                                onClick={() => void copySubscriptionLink(k.vpn_key, linkFieldId)}
+                                className="p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
+                                title="Скопировать"
+                              >
+                                <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => toggleSubscriptionLinkVisibility(k.id)}
+                                className="p-2 rounded-lg bg-secondary-container dark:bg-[#322522] text-primary hover:bg-tertiary-fixed transition-colors"
+                                title={isLinkHidden ? "Показать ссылку" : "Скрыть ссылку"}
+                                aria-pressed={isLinkHidden}
+                              >
+                                <span className="material-symbols-outlined text-[20px]">
+                                  {isLinkHidden ? "visibility_off" : "visibility"}
+                                </span>
+                              </button>
+                            </div>
                           </div>
                           <button
                             type="button"
