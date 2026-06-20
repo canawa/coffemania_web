@@ -6,6 +6,7 @@ import { PROFILE_ROUTE_REFRESH } from "@/app/components/ProfileRouteRefresh";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import type { TelegramAuthResult } from "@/lib/telegram";
 import { TELEGRAM_BOT_URL } from "@/lib/seo";
+import TelegramIcon from "@/app/components/TelegramIcon";
 
 type TelegramStatus = {
   linked: boolean;
@@ -132,7 +133,7 @@ export default function TelegramSyncCard() {
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold bg-primary text-on-primary hover:opacity-90 transition-opacity shrink-0 w-full sm:w-auto"
           >
-            <span className="material-symbols-outlined text-[18px]">send</span>
+            <TelegramIcon size={18} />
             Управлять подпиской в боте
           </a>
         </div>
