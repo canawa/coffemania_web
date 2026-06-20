@@ -74,8 +74,8 @@ export function openTelegramLogin(callback: (data: TelegramAuthResult) => void):
 
   const width = 550;
   const height = 650;
-  const left = Math.max(0, (screen.width - width) / 2) + (screen.availLeft | 0);
-  const top = Math.max(0, (screen.height - height) / 2) + (screen.availTop | 0);
+  const left = Math.max(0, Math.round((window.screen.width - width) / 2));
+  const top = Math.max(0, Math.round((window.screen.height - height) / 2));
   const features =
     `width=${width},height=${height},left=${left},top=${top},status=0,location=0,menubar=0,toolbar=0`;
 
