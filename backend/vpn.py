@@ -76,6 +76,7 @@ def _build_user_payload(
     username: str,
     expire_at_iso: str,
     email: str | None = None,
+    telegram_id: int | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "username": username,
@@ -86,9 +87,60 @@ def _build_user_payload(
     }
     if email:
         payload["email"] = email
+    if telegram_id is not None:
+        payload["telegramId"] = telegram_id
     if REMNAWAVE_INTERNAL_SQUAD_ID:
         payload["activeInternalSquads"] = [REMNAWAVE_INTERNAL_SQUAD_ID]
     return payload
+
+
+async def fetch_user_by_telegram_id(telegram_id: int) -> dict | None:
+    data, status, error_text = await _request_json(
+        "GET",
+        f"/api/users/by-telegram-id/{telegram_id}",
+    )
+    if status >= 400 or not isinstance(data, dict):
+        if status >= 400 and status != 404:
+            print(f"remnawave fetch by telegram id failed: {status} | {error_text}")
+        return None
+    return _unwrap_remnawave_response(data)
+
+
+async def attach_telegram_id_to_remnawave_user(
+    rw_user: dict,
+    telegram_id: int,
+    email: str | None = None,
+) -> bool:
+    username = rw_user.get("username")
+    if not isinstance(username, str) or not username.strip():
+        return False
+
+    expire_at = rw_user.get("expireAt") or rw_user.get("expire_at")
+    if not isinstance(expire_at, str) or not expire_at.strip():
+        expire_at = datetime.now().isoformat()
+
+    update_payload = _build_user_payload(
+        username=username.strip(),
+        expire_at_iso=expire_at,
+        email=email or rw_user.get("email"),
+        telegram_id=telegram_id,
+    )
+    update_payload["status"] = rw_user.get("status") or "ACTIVE"
+    user_uuid = rw_user.get("uuid")
+    if isinstance(user_uuid, str) and user_uuid.strip():
+        update_payload["uuid"] = user_uuid.strip()
+
+    _, update_status, update_error_text = await _request_json(
+        "PATCH",
+        "/api/users",
+        update_payload,
+    )
+    if update_status >= 400:
+        print(
+            f"remnawave attach telegramId failed: {update_status} | {update_error_text}",
+        )
+        return False
+    return True
 
 
 async def fetch_user_by_username(username: str) -> dict | None:
@@ -164,11 +216,13 @@ async def update_remnawave_user(
     expire_at_iso: str,
     email: str | None = None,
     user_uuid: str | None = None,
+    telegram_id: int | None = None,
 ) -> tuple[dict | None, int, str]:
     update_payload = _build_user_payload(
         username=username,
         expire_at_iso=expire_at_iso,
         email=email,
+        telegram_id=telegram_id,
     )
     update_payload["status"] = "ACTIVE"
     if isinstance(user_uuid, str) and user_uuid.strip():
@@ -184,7 +238,13 @@ async def update_remnawave_user(
     return updated, update_status, update_error_text
 
 
-async def generate_vpn_key(user_id: int, email: str, duration_days: int, country: str):
+async def generate_vpn_key(
+    user_id: int,
+    email: str,
+    duration_days: int,
+    country: str,
+    telegram_id: int | None = None,
+):
     if not REMNAWAVE_INTERNAL_SQUAD_ID:
         return {
             "error": "Не задан REMNAWAVE_INTERNAL_SQUAD_ID. Без internal squad Remnawave может возвращать access error."
@@ -193,19 +253,32 @@ async def generate_vpn_key(user_id: int, email: str, duration_days: int, country
 
     existing = await fetch_user_by_username(username)
     if existing:
-        return await renew_vpn_key(username, duration_days, country, email=email)
+        return await renew_vpn_key(
+            username,
+            duration_days,
+            country,
+            email=email,
+            telegram_id=telegram_id,
+        )
 
     expire_at = datetime.now() + timedelta(days=duration_days)
     payload = _build_user_payload(
         username=username,
         expire_at_iso=expire_at.isoformat(),
         email=email,
+        telegram_id=telegram_id,
     )
     payload["createdAt"] = datetime.now().isoformat()
     created_raw, status, error_text = await _request_json("POST", "/api/users", payload)
     if status >= 400:
         if status in (400, 409) and _user_already_exists_error(error_text):
-            return await renew_vpn_key(username, duration_days, country, email=email)
+            return await renew_vpn_key(
+                username,
+                duration_days,
+                country,
+                email=email,
+                telegram_id=telegram_id,
+            )
         print(f"remnawave create user failed: {status} | {error_text}")
         return {"error": f"Remnawave create user failed ({status}): {error_text}"}
 
@@ -229,6 +302,7 @@ async def renew_vpn_key(
     duration_days: int,
     country: str,
     email: str | None = None,
+    telegram_id: int | None = None,
 ):
     fetched = await fetch_user_by_username(username)
     if not fetched:
@@ -240,6 +314,7 @@ async def renew_vpn_key(
         expire_at_iso=new_expire_dt.isoformat(),
         email=email,
         user_uuid=fetched.get("uuid") if isinstance(fetched.get("uuid"), str) else None,
+        telegram_id=telegram_id,
     )
     if update_status >= 400 or not updated:
         print(f"remnawave renew failed: {update_status} | {update_error_text}")

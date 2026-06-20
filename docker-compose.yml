@@ -7,6 +7,7 @@ services:
       - .env
     environment:
       DATABASE_PATH: /app/data/database.db
+      TELEGRAM_CLIENT_ID: ${TELEGRAM_CLIENT_ID:-7964141443}
     volumes:
       - ./backend/data:/app/data
     expose:
@@ -24,6 +25,7 @@ services:
       context: ./coffeemania
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://backend:8001}
+        NEXT_PUBLIC_TELEGRAM_CLIENT_ID: ${TELEGRAM_CLIENT_ID:-7964141443}
     container_name: coffeemania-frontend
     env_file:
       - .env

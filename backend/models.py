@@ -16,6 +16,10 @@ class ResetPasswordRequest(BaseModel):
     code: str = Field(min_length=6, max_length=6)
     new_password: str = Field(min_length=6, max_length=128)
 
+class TelegramLinkRequest(BaseModel):
+    id_token: str = Field(min_length=20)
+    telegram_id: Optional[int] = Field(default=None, gt=0)
+
 class PaymentRequest(BaseModel):
     amount: int
     promo_code: Optional[str] = None

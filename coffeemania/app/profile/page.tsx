@@ -5,6 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { PROFILE_ROUTE_REFRESH } from "@/app/components/ProfileRouteRefresh";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import { FlagBadge, VPN_LOCATIONS } from "@/app/components/CountryFlags";
+import TelegramSyncCard from "@/app/components/TelegramSyncCard";
 import {
   getPlanById,
   SUBSCRIPTION_PLANS,
@@ -617,6 +618,7 @@ export default function ProfilePage() {
           </section>
 
           <aside className="flex flex-col gap-4 min-w-0 max-w-full lg:sticky lg:top-28">
+            <TelegramSyncCard />
             <a
               href="https://github.com/canawa/vpn_client/releases/download/beta-release-1.01/coffeemania-beta-1.01.apk"
               className="block w-full max-w-full rounded-2xl overflow-hidden shadow-md hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-tertiary-fixed/40"

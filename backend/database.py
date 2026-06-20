@@ -89,6 +89,20 @@ def create_tables():
             cursor.execute("ALTER TABLE users ADD COLUMN withdrawed REAL NOT NULL DEFAULT 0")
         if "withdraw_available" not in user_cols:
             cursor.execute("ALTER TABLE users ADD COLUMN withdraw_available REAL NOT NULL DEFAULT 0")
+        if "telegram_id" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN telegram_id INTEGER")
+        if "telegram_username" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN telegram_username TEXT")
+        if "telegram_name" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN telegram_name TEXT")
+        if "telegram_photo_url" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN telegram_photo_url TEXT")
+        if "telegram_linked_at" not in user_cols:
+            cursor.execute("ALTER TABLE users ADD COLUMN telegram_linked_at TEXT")
+
+        cursor.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id) WHERE telegram_id IS NOT NULL"
+        )
 
         # Backward-compatible migration for existing DBs.
         cursor.execute("PRAGMA table_info(transactions)")

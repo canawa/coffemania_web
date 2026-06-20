@@ -20,6 +20,7 @@ from models import (
     AdminLoginRequest,
     SendCodeRequest,
     ResetPasswordRequest,
+    TelegramLinkRequest,
 )
 import jwt
 from datetime import datetime, timedelta
@@ -27,6 +28,8 @@ import time
 from auth import create_jwt, verify_jwt, create_admin_jwt
 from yookassa import Configuration, Payment # для работы с Юкассой
 from vpn import (
+    attach_telegram_id_to_remnawave_user,
+    fetch_user_by_telegram_id,
     fetch_user_by_username,
     generate_vpn_key,
     remnawave_user_to_subscription,
@@ -39,6 +42,7 @@ from verification import (
     normalize_email,
     verify_code,
 )
+from telegram_auth import extract_telegram_profile, verify_telegram_id_token
 
 class LoginRequest(BaseModel):
     email: str
@@ -127,6 +131,16 @@ def _get_user_id_by_email(email: str) -> int | None:
     return int(row[0]) if row else None
 
 
+def _get_telegram_id_by_email(email: str) -> int | None:
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute("SELECT telegram_id FROM users WHERE email = ? LIMIT 1", (email,))
+        row = cur.fetchone()
+    if not row or row[0] is None:
+        return None
+    return int(row[0])
+
+
 def _parse_expire_at(expires_at: str | None) -> datetime | None:
     if not expires_at:
         return None
@@ -146,21 +160,13 @@ def _is_subscription_active(expires_at: str | None) -> bool:
     return parsed > datetime.now()
 
 
-async def _sync_subscription_from_remnawave(email: str) -> None:
-    user_id = _get_user_id_by_email(email)
-    if not user_id:
-        return
-
-    rw_user = await fetch_user_by_username(remnawave_username(user_id))
-    subscription = remnawave_user_to_subscription(rw_user)
-    if not subscription:
-        return
-
-    username = subscription.get("username") or remnawave_username(user_id)
-    sub_url = subscription["subscription_url"]
-    expires_at = subscription.get("expires_at")
+def _upsert_vpn_key_from_remnawave(
+    email: str,
+    username: str,
+    sub_url: str,
+    expires_at: str | None,
+) -> None:
     now_iso = datetime.now().isoformat()
-
     with connect() as con:
         cur = con.cursor()
         cur.execute(
@@ -196,6 +202,89 @@ async def _sync_subscription_from_remnawave(email: str) -> None:
             )
         con.commit()
 
+
+async def _sync_subscription_from_remnawave(email: str) -> None:
+    user_id = _get_user_id_by_email(email)
+    if not user_id:
+        return
+
+    rw_user = await fetch_user_by_username(remnawave_username(user_id))
+    subscription = remnawave_user_to_subscription(rw_user)
+    if not subscription:
+        return
+
+    username = subscription.get("username") or remnawave_username(user_id)
+    _upsert_vpn_key_from_remnawave(
+        email,
+        username,
+        subscription["subscription_url"],
+        subscription.get("expires_at"),
+    )
+
+
+async def _reconcile_telegram_subscription(email: str, telegram_id: int) -> dict:
+    tg_user = await fetch_user_by_telegram_id(telegram_id)
+    tg_subscription = remnawave_user_to_subscription(tg_user)
+    if tg_user and tg_subscription:
+        username = tg_subscription.get("username") or tg_user.get("username") or str(telegram_id)
+        _upsert_vpn_key_from_remnawave(
+            email,
+            username,
+            tg_subscription["subscription_url"],
+            tg_subscription.get("expires_at"),
+        )
+        return {
+            "link_action": "imported_from_bot",
+            "subscription_synced": True,
+            "message": "Telegram подключён, подписка из бота синхронизирована",
+        }
+
+    user_id = _get_user_id_by_email(email)
+    web_user = None
+    if user_id:
+        web_user = await fetch_user_by_username(remnawave_username(user_id))
+
+    web_subscription = remnawave_user_to_subscription(web_user)
+    has_active_web_subscription = bool(
+        web_subscription and _is_subscription_active(web_subscription.get("expires_at"))
+    )
+
+    if web_user and has_active_web_subscription:
+        attached = await attach_telegram_id_to_remnawave_user(
+            web_user,
+            telegram_id,
+            email=email,
+        )
+        if attached:
+            _upsert_vpn_key_from_remnawave(
+                email,
+                web_subscription.get("username") or remnawave_username(user_id),
+                web_subscription["subscription_url"],
+                web_subscription.get("expires_at"),
+            )
+            return {
+                "link_action": "attached_to_web",
+                "subscription_synced": False,
+                "message": "Telegram привязан к вашей активной подписке на сайте",
+            }
+        return {
+            "link_action": "attached_to_web",
+            "subscription_synced": False,
+            "message": (
+                "Telegram подключён, но не удалось обновить привязку в панели. "
+                "Напишите в поддержку, если бот не видит подписку."
+            ),
+        }
+
+    return {
+        "link_action": "pending_purchase",
+        "subscription_synced": False,
+        "message": (
+            "Telegram подключён. При следующей покупке на сайте подписка будет "
+            "привязана к вашему Telegram."
+        ),
+    }
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=cors_origins,
@@ -226,6 +315,168 @@ def get_admin_payload(request: Request):
     if payload.get("role") != "admin":
         return None
     return payload
+
+
+def _get_user_payload(request: Request) -> dict | None:
+    token = request.cookies.get("token")
+    if not token:
+        return None
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return None
+    return payload
+
+
+def _require_user_payload(request: Request) -> dict | JSONResponse:
+    payload = _get_user_payload(request)
+    if not payload:
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+    return payload
+
+
+def _telegram_status_for_email(email: str) -> dict:
+    with connect() as con:
+        con.row_factory = sq.Row
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT telegram_id, telegram_username, telegram_name, telegram_photo_url, telegram_linked_at
+            FROM users
+            WHERE email = ?
+            LIMIT 1
+            """,
+            (email,),
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return {"linked": False}
+
+    return {
+        "linked": row["telegram_id"] is not None,
+        "telegram_id": row["telegram_id"],
+        "telegram_username": row["telegram_username"],
+        "telegram_name": row["telegram_name"],
+        "telegram_photo_url": row["telegram_photo_url"],
+        "telegram_linked_at": row["telegram_linked_at"],
+    }
+
+
+@app.get("/telegram/status")
+def telegram_status(request: Request):
+    payload = _require_user_payload(request)
+    if isinstance(payload, JSONResponse):
+        return payload
+    email = normalize_email(payload["email"])
+    return {"status": "success", **_telegram_status_for_email(email)}
+
+
+@app.post("/telegram/link")
+async def telegram_link(request: Request, body: TelegramLinkRequest):
+    payload = _require_user_payload(request)
+    if isinstance(payload, JSONResponse):
+        return payload
+
+    email = normalize_email(payload["email"])
+
+    try:
+        token_payload = verify_telegram_id_token(body.id_token.strip())
+        profile = extract_telegram_profile(token_payload)
+    except Exception as exc:
+        print(f"[telegram] link verify failed: {exc}")
+        return JSONResponse(
+            content={"status": "error", "message": "Не удалось подтвердить вход через Telegram"},
+            status_code=400,
+        )
+
+    telegram_id = profile["telegram_id"]
+    if body.telegram_id is not None and int(body.telegram_id) != telegram_id:
+        return JSONResponse(
+            content={"status": "error", "message": "Telegram ID не совпадает с токеном авторизации"},
+            status_code=400,
+        )
+
+    now_iso = datetime.now().isoformat()
+
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT email FROM users WHERE telegram_id = ? AND email <> ? LIMIT 1",
+            (telegram_id, email),
+        )
+        other = cur.fetchone()
+        if other:
+            return JSONResponse(
+                content={
+                    "status": "error",
+                    "message": "Этот Telegram уже привязан к другому аккаунту",
+                },
+                status_code=409,
+            )
+
+        cur.execute(
+            """
+            UPDATE users
+            SET telegram_id = ?, telegram_username = ?, telegram_name = ?,
+                telegram_photo_url = ?, telegram_linked_at = ?
+            WHERE email = ?
+            """,
+            (
+                telegram_id,
+                profile.get("telegram_username"),
+                profile.get("telegram_name"),
+                profile.get("telegram_photo_url"),
+                now_iso,
+                email,
+            ),
+        )
+        if cur.rowcount == 0:
+            return JSONResponse(
+                content={"status": "error", "message": "Пользователь не найден"},
+                status_code=404,
+            )
+        con.commit()
+
+    print(f"[telegram] linked email={email} telegram_id={telegram_id}")
+
+    reconcile = await _reconcile_telegram_subscription(email, telegram_id)
+
+    return {
+        "status": "success",
+        **_telegram_status_for_email(email),
+        **reconcile,
+    }
+
+
+@app.post("/telegram/unlink")
+def telegram_unlink(request: Request):
+    payload = _require_user_payload(request)
+    if isinstance(payload, JSONResponse):
+        return payload
+
+    email = normalize_email(payload["email"])
+
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            UPDATE users
+            SET telegram_id = NULL, telegram_username = NULL, telegram_name = NULL,
+                telegram_photo_url = NULL, telegram_linked_at = NULL
+            WHERE email = ?
+            """,
+            (email,),
+        )
+        con.commit()
+
+    return {
+        "status": "success",
+        "message": "Telegram отключён",
+        **_telegram_status_for_email(email),
+    }
 
 
 def normalize_referral_code(value: Optional[str]) -> Optional[str]:
@@ -327,6 +578,7 @@ async def buy_vpn(request: Request, configuration: VpnConfiguration):
         payload["email"],
         SUBSCRIPTION_DURATION_DAYS,
         "germany1",
+        telegram_id=_get_telegram_id_by_email(payload["email"]),
     )
     if not generated:
         return JSONResponse(
@@ -463,6 +715,7 @@ async def renew_vpn(request: Request, payload_req: RenewSubscriptionRequest):
             username=target["vpn_username"],
             duration_days=SUBSCRIPTION_DURATION_DAYS,
             country=target["country"],
+            telegram_id=_get_telegram_id_by_email(payload["email"]),
         )
         if not renewed:
             return JSONResponse(
@@ -515,11 +768,13 @@ async def _provision_new_subscription(email: str, duration_days: int) -> dict | 
     if user_id is None:
         return None
 
+    telegram_id = _get_telegram_id_by_email(email)
     generated = await generate_vpn_key(
         user_id,
         email,
         duration_days,
         "germany1",
+        telegram_id=telegram_id,
     )
     if not generated or generated.get("error"):
         return None
@@ -602,6 +857,8 @@ async def _provision_renew_subscription(
             username=vpn_username,
             duration_days=duration_days,
             country=target["country"],
+            email=email,
+            telegram_id=_get_telegram_id_by_email(email),
         )
         if not renewed or renewed.get("error"):
             return None
