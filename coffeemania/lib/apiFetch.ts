@@ -33,7 +33,7 @@ export async function apiFetch(
   if (path.startsWith("/admin")) {
     return res;
   }
-  if (path === "/login" || path === "/register") {
+  if (path === "/login" || path === "/register" || path === "/") {
     return res;
   }
 
