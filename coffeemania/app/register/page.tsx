@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import TelegramAuthButton from "@/app/components/TelegramAuthButton";
+import TelegramAuthDivider from "@/app/components/TelegramAuthDivider";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import { useSiteTheme } from "@/lib/useSiteTheme";
 
@@ -280,6 +282,22 @@ export default function RegisterPage() {
                   </button>
                 </div>
               )}
+
+              {step === "form" ? (
+                <>
+                  <TelegramAuthDivider />
+
+                  <TelegramAuthButton
+                    label="Зарегистрироваться через Telegram"
+                    onMessage={(message, type) =>
+                      setSubmitState({
+                        status: type === "error" ? "error" : "success",
+                        message,
+                      })
+                    }
+                  />
+                </>
+              ) : null}
 
               {submitState.status !== "idle" && (
                 <div

@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import TelegramAuthButton from "@/app/components/TelegramAuthButton";
+import TelegramAuthDivider from "@/app/components/TelegramAuthDivider";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import { useSiteTheme } from "@/lib/useSiteTheme";
 
@@ -200,6 +202,18 @@ export default function LoginPage() {
                   Забыли пароль?
                 </Link>
               </div>
+
+              <TelegramAuthDivider />
+
+              <TelegramAuthButton
+                label="Зайти через Telegram"
+                onMessage={(message, type) =>
+                  setSubmitState({
+                    status: type === "error" ? "error" : "success",
+                    message,
+                  })
+                }
+              />
 
               {submitState.status !== "idle" ? (
                 <div

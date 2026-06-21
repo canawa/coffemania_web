@@ -2,8 +2,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/app/components/ThemeToggle";
+import TelegramAuthButton from "@/app/components/TelegramAuthButton";
 import { FlagBadge, VPN_LOCATIONS } from "@/app/components/CountryFlags";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 import { useSiteTheme } from "@/lib/useSiteTheme";
@@ -33,8 +34,31 @@ function PlanFeatures({ featured = false }: { featured?: boolean }) {
 export default function Home() {
   const [activeTab, setActiveTab] = useState("home");
   const [isCheckingCabinet, setIsCheckingCabinet] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const router = useRouter();
   const { isDark, setTheme } = useSiteTheme();
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await apiFetch(`${API_BASE_URL}/balance`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!cancelled) {
+          setIsLoggedIn(res.ok);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsLoggedIn(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handleCabinetClick = async () => {
     if (isCheckingCabinet) return;
@@ -83,8 +107,13 @@ export default function Home() {
               Цены
             </a>
           </div>
-          <div className="ml-auto md:ml-0 flex items-center gap-3 sm:gap-4 shrink-0 md:justify-self-end">
+          <div className="ml-auto md:ml-0 flex items-center gap-2 sm:gap-3 shrink-0 md:justify-self-end">
             <ThemeToggle isDark={isDark} onChange={setTheme} />
+            {isLoggedIn === false ? (
+              <div className="hidden sm:block w-[190px]">
+                <TelegramAuthButton label="Зайти через Telegram" />
+              </div>
+            ) : null}
             <button
               className="bg-button text-on-button px-2.5 sm:px-6 py-2 rounded-full text-[11px] sm:text-base font-bold hover:scale-105 active:scale-95 transition-all whitespace-nowrap"
               onClick={handleCabinetClick}
@@ -115,6 +144,11 @@ export default function Home() {
                 >
                   Выбрать тариф
                 </a>
+                {isLoggedIn === false ? (
+                  <div className="w-full sm:w-auto sm:min-w-[240px]">
+                    <TelegramAuthButton label="Зайти через Telegram" />
+                  </div>
+                ) : null}
               </div>
             </div>
 

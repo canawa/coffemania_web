@@ -366,6 +366,66 @@ def _require_user_payload(request: Request) -> dict | JSONResponse:
     return payload
 
 
+def _telegram_account_email(telegram_id: int) -> str:
+    return f"tg_{telegram_id}@telegram.coffemaniavpn.local"
+
+
+def _verify_telegram_link_request(body: TelegramLinkRequest) -> tuple[dict, int] | JSONResponse:
+    try:
+        token_payload = verify_telegram_id_token(body.id_token.strip())
+        profile = extract_telegram_profile(token_payload)
+    except ConnectionError as exc:
+        print(f"[telegram] verify failed: {exc}")
+        return JSONResponse(
+            content={
+                "status": "error",
+                "message": "Сервер не может связаться с Telegram. Попробуйте позже или напишите в поддержку.",
+            },
+            status_code=503,
+        )
+    except Exception as exc:
+        print(f"[telegram] verify failed: {exc}")
+        return JSONResponse(
+            content={"status": "error", "message": "Не удалось подтвердить вход через Telegram"},
+            status_code=400,
+        )
+
+    telegram_id = profile["telegram_id"]
+    if body.telegram_id is not None and int(body.telegram_id) != telegram_id:
+        return JSONResponse(
+            content={"status": "error", "message": "Telegram ID не совпадает с токеном авторизации"},
+            status_code=400,
+        )
+    return profile, telegram_id
+
+
+def _update_user_telegram_profile(
+    email: str,
+    profile: dict,
+    telegram_id: int,
+    linked_at: str,
+) -> None:
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            UPDATE users
+            SET telegram_id = ?, telegram_username = ?, telegram_name = ?,
+                telegram_photo_url = ?, telegram_linked_at = ?
+            WHERE email = ?
+            """,
+            (
+                telegram_id,
+                profile.get("telegram_username"),
+                profile.get("telegram_name"),
+                profile.get("telegram_photo_url"),
+                linked_at,
+                email,
+            ),
+        )
+        con.commit()
+
+
 def _telegram_status_for_email(email: str) -> dict:
     with connect() as con:
         con.row_factory = sq.Row
@@ -403,6 +463,87 @@ def telegram_status(request: Request):
     return {"status": "success", **_telegram_status_for_email(email)}
 
 
+@app.post("/telegram/auth")
+async def telegram_auth(body: TelegramLinkRequest):
+    verified = _verify_telegram_link_request(body)
+    if isinstance(verified, JSONResponse):
+        return verified
+    profile, telegram_id = verified
+    now_iso = datetime.now().isoformat()
+    is_new_user = False
+
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            "SELECT email FROM users WHERE telegram_id = ? LIMIT 1",
+            (telegram_id,),
+        )
+        existing = cur.fetchone()
+
+        if existing:
+            email = normalize_email(existing[0])
+        else:
+            email = _telegram_account_email(telegram_id)
+            cur.execute("SELECT 1 FROM users WHERE email = ? LIMIT 1", (email,))
+            if cur.fetchone():
+                return JSONResponse(
+                    content={
+                        "status": "error",
+                        "message": "Не удалось создать аккаунт. Обратитесь в поддержку.",
+                    },
+                    status_code=409,
+                )
+            cur.execute(
+                """
+                INSERT INTO users (
+                    email, password, created_at,
+                    telegram_id, telegram_username, telegram_name,
+                    telegram_photo_url, telegram_linked_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    email,
+                    secrets.token_urlsafe(32),
+                    now_iso,
+                    telegram_id,
+                    profile.get("telegram_username"),
+                    profile.get("telegram_name"),
+                    profile.get("telegram_photo_url"),
+                    now_iso,
+                ),
+            )
+            is_new_user = True
+        con.commit()
+
+    if not is_new_user:
+        _update_user_telegram_profile(email, profile, telegram_id, now_iso)
+
+    print(f"[telegram] auth email={email} telegram_id={telegram_id} new={is_new_user}")
+
+    reconcile = await _reconcile_telegram_subscription(email, telegram_id)
+    await _sync_subscription_from_remnawave(email)
+
+    default_message = (
+        "Регистрация через Telegram успешна"
+        if is_new_user
+        else "Вход через Telegram выполнен"
+    )
+    message = reconcile.get("message") or default_message
+
+    token = create_jwt(email, "user", {})
+    response = JSONResponse(
+        content={
+            "status": "success",
+            "is_new_user": is_new_user,
+            "message": message,
+            **_telegram_status_for_email(email),
+            **reconcile,
+        },
+    )
+    response.set_cookie(key="token", value=token, **_auth_cookie_kwargs())
+    return response
+
+
 @app.post("/telegram/link")
 async def telegram_link(request: Request, body: TelegramLinkRequest):
     payload = _require_user_payload(request)
@@ -411,31 +552,10 @@ async def telegram_link(request: Request, body: TelegramLinkRequest):
 
     email = normalize_email(payload["email"])
 
-    try:
-        token_payload = verify_telegram_id_token(body.id_token.strip())
-        profile = extract_telegram_profile(token_payload)
-    except ConnectionError as exc:
-        print(f"[telegram] link verify failed: {exc}")
-        return JSONResponse(
-            content={
-                "status": "error",
-                "message": "Сервер не может связаться с Telegram. Попробуйте позже или напишите в поддержку.",
-            },
-            status_code=503,
-        )
-    except Exception as exc:
-        print(f"[telegram] link verify failed: {exc}")
-        return JSONResponse(
-            content={"status": "error", "message": "Не удалось подтвердить вход через Telegram"},
-            status_code=400,
-        )
-
-    telegram_id = profile["telegram_id"]
-    if body.telegram_id is not None and int(body.telegram_id) != telegram_id:
-        return JSONResponse(
-            content={"status": "error", "message": "Telegram ID не совпадает с токеном авторизации"},
-            status_code=400,
-        )
+    verified = _verify_telegram_link_request(body)
+    if isinstance(verified, JSONResponse):
+        return verified
+    profile, telegram_id = verified
 
     now_iso = datetime.now().isoformat()
 
