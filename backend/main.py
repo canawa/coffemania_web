@@ -1,5 +1,6 @@
 import os
 import secrets
+import asyncio
 from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -130,6 +131,49 @@ def _get_user_id_by_email(email: str) -> int | None:
         cur.execute("SELECT id FROM users WHERE email = ? LIMIT 1", (email,))
         row = cur.fetchone()
     return int(row[0]) if row else None
+
+
+def _yookassa_payment_description(
+    purpose: str,
+    email: str,
+    user_id: int | None,
+    telegram_id: int | None = None,
+) -> str:
+    title = "Продление Coffee Mania VPN (через сайт)" if purpose == "renew" else "Подписка Coffee Mania VPN (через сайт)"
+    parts = [title, email]
+    if user_id is not None:
+        parts.append(f"uid:{user_id}")
+    if telegram_id is not None:
+        parts.append(f"tg:{telegram_id}")
+    return " | ".join(parts)[:128]
+
+
+def _create_yookassa_payment(
+    amount: int,
+    return_url: str,
+    description: str,
+    metadata: dict[str, str],
+):
+    return Payment.create(
+        {
+            "amount": {
+                "value": f"{amount:.2f}",
+                "currency": "RUB",
+            },
+            "confirmation": {
+                "type": "redirect",
+                "return_url": return_url,
+            },
+            "capture": True,
+            "description": description,
+            "metadata": metadata,
+        },
+        str(uuid4()),
+    )
+
+
+def _find_yookassa_payment(payment_id: str):
+    return Payment.find_one(payment_id)
 
 
 def _get_telegram_id_by_email(email: str) -> int | None:
@@ -1042,7 +1086,7 @@ async def _provision_renew_subscription(
 
 
 @app.post('/create_payment')
-def create_payment(payment: PaymentRequest, request: Request): # обязательно PyDantic модель иначе не работает
+async def create_payment(payment: PaymentRequest, request: Request): # обязательно PyDantic модель иначе не работает
     token = request.cookies.get('token')
     payload = verify_jwt(token)
     if payload.get('status') == 'error':
@@ -1092,28 +1136,38 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
             )
         promo_code = owner[1]
 
-    payment_description = (
-        "Продление подписки Coffee Mania VPN"
-        if purpose == "renew"
-        else "Подписка Coffee Mania VPN"
+    email = normalize_email(payload["email"])
+    user_id = _get_user_id_by_email(email)
+    telegram_id = _get_telegram_id_by_email(email)
+    payment_description = _yookassa_payment_description(
+        purpose,
+        email,
+        user_id,
+        telegram_id,
     )
+    payment_metadata: dict[str, str] = {
+        "email": email,
+        "purpose": purpose,
+        "duration_days": str(duration_days),
+    }
+    if user_id is not None:
+        payment_metadata["user_id"] = str(user_id)
+    if telegram_id is not None:
+        payment_metadata["telegram_id"] = str(telegram_id)
+    if promo_code:
+        payment_metadata["promo_code"] = promo_code
+    if purpose == "renew" and payment.subscription_id is not None:
+        payment_metadata["subscription_id"] = str(payment.subscription_id)
+
     return_url = f"{(frontend_url or 'http://localhost:3002').rstrip('/')}/profile"
 
     try:
-        yoo_payment = Payment.create(
-            {
-                "amount": {
-                    "value": f"{payment.amount:.2f}",
-                    "currency": "RUB",
-                },
-                "confirmation": {
-                    "type": "redirect",
-                    "return_url": return_url,
-                },
-                "capture": True,
-                "description": payment_description,
-            },
-            str(uuid4()),
+        yoo_payment = await asyncio.to_thread(
+            _create_yookassa_payment,
+            payment.amount,
+            return_url,
+            payment_description,
+            payment_metadata,
         )
     except Exception:
         return JSONResponse(
@@ -1142,7 +1196,7 @@ def create_payment(payment: PaymentRequest, request: Request): # обязате�
             """,
             (
                 yoo_payment.id,
-                payload["email"],
+                email,
                 promo_code,
                 datetime.now().isoformat(),
                 purpose,
@@ -1177,7 +1231,7 @@ def _normalize_payment_promo_code(promo_code: Optional[str], email: str) -> Opti
 
 async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
     try:
-        payment = Payment.find_one(payment_id)
+        payment = await asyncio.to_thread(_find_yookassa_payment, payment_id)
     except Exception:
         return {"status": "error", "message": "Платёж не найден"}
 
