@@ -16,6 +16,7 @@ import {
 const PENDING_PAYMENT_ID_KEY = "pending_payment_id";
 const PENDING_PAYMENT_STARTED_KEY = "pending_payment_started_at";
 const PAYMENT_VERIFY_WINDOW_MS = 15 * 60 * 1000;
+const DEVICE_SLOT_PRICE = 30;
 
 function clearPendingPayment() {
   localStorage.removeItem(PENDING_PAYMENT_ID_KEY);
@@ -56,6 +57,7 @@ export default function ProfilePage() {
   const pathname = usePathname();
   const [isAddKeyOpen, setIsAddKeyOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [isBuyingDevice, setIsBuyingDevice] = useState(false);
   const [buyKeyMessage, setBuyKeyMessage] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<{
     id?: number;
@@ -65,6 +67,13 @@ export default function ProfilePage() {
   }>({ active: false, subscription_url: null });
   const [copyToast, setCopyToast] = useState<string | null>(null);
   const [hiddenSubscriptionLinks, setHiddenSubscriptionLinks] = useState<Record<number, boolean>>({});
+  const [deviceInfo, setDeviceInfo] = useState<{
+    active: boolean;
+    devices_used: number;
+    devices_limit: number;
+    devices_available: number;
+    extra_slot_price: number;
+  } | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<SubscriptionPlanId>("1m");
   const selectedPlan = getPlanById(selectedPlanId);
   const [paymentVerifyState, setPaymentVerifyState] = useState<"idle" | "pending" | "error">("idle");
@@ -85,6 +94,54 @@ export default function ProfilePage() {
     }>
   >([]);
 
+  const getDeviceInfo = async () => {
+    const res = await apiFetch(`${API_BASE_URL}/devices`, {
+      method: "GET",
+      credentials: "include",
+    });
+    if (res.status === 401 || !res.ok) {
+      return {
+        active: false,
+        devices_used: 0,
+        devices_limit: 0,
+        devices_available: 0,
+        extra_slot_price: DEVICE_SLOT_PRICE,
+      };
+    }
+    const data = (await res.json()) as {
+      active?: boolean;
+      devices_used?: number;
+      devices_limit?: number;
+      devices_available?: number;
+      extra_slot_price?: number;
+    };
+    return {
+      active: Boolean(data.active),
+      devices_used: data.devices_used ?? 0,
+      devices_limit: data.devices_limit ?? 0,
+      devices_available: data.devices_available ?? 0,
+      extra_slot_price: data.extra_slot_price ?? DEVICE_SLOT_PRICE,
+    };
+  };
+
+  const startPayment = async (body: Record<string, unknown>) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+
+    const res = await apiFetch(`${API_BASE_URL}/create_payment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      signal: controller.signal,
+      body: JSON.stringify(body),
+    });
+
+    window.clearTimeout(timeoutId);
+    return res;
+  };
+
   const payForSubscription = async () => {
     setIsPaying(true);
     setBuyKeyMessage(null);
@@ -92,26 +149,13 @@ export default function ProfilePage() {
     let redirecting = false;
 
     try {
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 30000);
-
-      const res = await apiFetch(`${API_BASE_URL}/create_payment`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        signal: controller.signal,
-        body: JSON.stringify({
-          amount: selectedPlan.price,
-          duration_days: selectedPlan.days,
-          promo_code: null,
-          purpose: subscription.active ? "renew" : "subscription",
-          subscription_id: subscription.active ? subscription.id ?? null : null,
-        }),
+      const res = await startPayment({
+        amount: selectedPlan.price,
+        duration_days: selectedPlan.days,
+        promo_code: null,
+        purpose: subscription.active ? "renew" : "subscription",
+        subscription_id: subscription.active ? subscription.id ?? null : null,
       });
-
-      window.clearTimeout(timeoutId);
 
       if (res.status === 401) {
         const message = "Сессия истекла. Выйдите и войдите снова.";
@@ -169,6 +213,80 @@ export default function ProfilePage() {
     } finally {
       if (!redirecting) {
         setIsPaying(false);
+      }
+    }
+  };
+
+  const payForDeviceSlot = async () => {
+    setIsBuyingDevice(true);
+    setBuyKeyMessage(null);
+
+    let redirecting = false;
+
+    try {
+      const res = await startPayment({
+        amount: deviceInfo?.extra_slot_price ?? DEVICE_SLOT_PRICE,
+        duration_days: 1,
+        promo_code: null,
+        purpose: "device",
+      });
+
+      if (res.status === 401) {
+        const message = "Сессия истекла. Выйдите и войдите снова.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      let data: {
+        id?: string;
+        message?: string;
+        confirmation?: { confirmation_url?: string };
+        confirmation_url?: string;
+      };
+
+      try {
+        data = (await res.json()) as typeof data;
+      } catch {
+        const message = "Сервер вернул некорректный ответ. Проверьте, что бэкенд запущен.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      if (!res.ok) {
+        const message = data?.message ?? `Ошибка ${res.status}`;
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      const paymentId = data.id;
+      const confirmationUrl =
+        data.confirmation?.confirmation_url ?? data.confirmation_url;
+
+      if (!paymentId || !confirmationUrl) {
+        const message = "Не удалось получить ссылку на оплату. Попробуйте ещё раз.";
+        setBuyKeyMessage(message);
+        setCopyToast(message);
+        return;
+      }
+
+      markPendingPayment(paymentId);
+      redirecting = true;
+      window.location.href = confirmationUrl;
+    } catch (e) {
+      const message =
+        e instanceof Error && e.name === "AbortError"
+          ? "Превышено время ожидания. Проверьте, что бэкенд запущен на порту 8001."
+          : e instanceof Error
+            ? e.message
+            : "Не удалось начать оплату";
+      setBuyKeyMessage(message);
+      setCopyToast(message);
+    } finally {
+      if (!redirecting) {
+        setIsBuyingDevice(false);
       }
     }
   };
@@ -281,6 +399,8 @@ export default function ProfilePage() {
     setVpnKeys(keys);
     const sub = await getSubscription();
     setSubscription(sub);
+    const devices = await getDeviceInfo();
+    setDeviceInfo(devices);
   }, []);
 
   const hidePaymentVerify = useCallback(() => {
@@ -315,14 +435,20 @@ export default function ProfilePage() {
       }
 
       const data = (await result.json()) as
-        | { status?: string; message?: string }
+        | { status?: string; message?: string; purpose?: string }
         | boolean;
 
       if (data === true || (typeof data === "object" && data.status === "success")) {
         clearPendingPayment();
         await refreshSubscriptionData();
         hidePaymentVerify();
-        setCopyToast("Оплата прошла успешно, подписка активирована");
+        const successMessage =
+          typeof data === "object" && data.message
+            ? data.message
+            : typeof data === "object" && data.purpose === "device"
+              ? "Оплата прошла, устройство добавлено"
+              : "Оплата прошла успешно, подписка активирована";
+        setCopyToast(successMessage);
         setTimeout(() => setCopyToast(null), 3000);
         return true;
       }
@@ -571,10 +697,42 @@ export default function ProfilePage() {
                           <div className="rounded-xl bg-surface-container-low px-4 py-3">
                             <p className="text-xs uppercase tracking-wide text-on-surface-variant">Тариф</p>
                             <p className="text-sm font-semibold text-primary mt-1">
-                              {formatDuration(k.duration)} · безлимит · до 3 устройств
+                              {formatDuration(k.duration)} · безлимит
                             </p>
                           </div>
+                          <div className="rounded-xl bg-surface-container-low px-4 py-3 sm:col-span-2">
+                            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Устройства</p>
+                            <p className="text-sm font-semibold text-primary mt-1">
+                              {deviceInfo?.active
+                                ? `${deviceInfo.devices_used} из ${deviceInfo.devices_limit} задействовано`
+                                : "—"}
+                            </p>
+                            {deviceInfo?.active ? (
+                              <p className="text-xs text-on-surface-variant mt-1">
+                                Свободно слотов: {deviceInfo.devices_available}
+                              </p>
+                            ) : null}
+                          </div>
                         </div>
+
+                        {deviceInfo?.active && !expired ? (
+                          <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                              <p className="font-bold text-primary">Докупить устройство</p>
+                              <p className="text-sm text-on-surface-variant mt-1">
+                                +1 слот к лимиту подписки за {deviceInfo.extra_slot_price} ₽
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => void payForDeviceSlot()}
+                              disabled={isBuyingDevice}
+                              className="shrink-0 w-full sm:w-auto px-6 py-3 rounded-full font-bold bg-button text-on-button hover:bg-button-hover disabled:opacity-60 transition-all"
+                            >
+                              {isBuyingDevice ? "Переход к оплате…" : `Докупить за ${deviceInfo.extra_slot_price} ₽`}
+                            </button>
+                          </div>
+                        ) : null}
 
                         <div className="space-y-3">
                           <p className="font-bold text-primary">Ссылка для подключения</p>

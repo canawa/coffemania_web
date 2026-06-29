@@ -29,10 +29,13 @@ import time
 from auth import create_jwt, verify_jwt, create_admin_jwt
 from yookassa import Configuration, Payment # для работы с Юкассой
 from vpn import (
+    add_hwid_device_slots,
     attach_telegram_id_to_remnawave_user,
     fetch_telegram_bot_subscription,
     fetch_user_by_username,
     generate_vpn_key,
+    get_account_device_stats,
+    resolve_remnawave_account_user,
     remnawave_telegram_username,
     remnawave_user_to_subscription,
     renew_vpn_key,
@@ -119,6 +122,8 @@ SUBSCRIPTION_PLANS = {
     90: 399,
     365: 899,
 }
+DEVICE_SLOT_PRICE = 30
+DEVICE_SLOTS_PER_PURCHASE = 1
 
 
 def _plan_price(duration_days: int) -> int | None:
@@ -139,7 +144,12 @@ def _yookassa_payment_description(
     user_id: int | None,
     telegram_id: int | None = None,
 ) -> str:
-    title = "Продление Coffee Mania VPN (через сайт)" if purpose == "renew" else "Подписка Coffee Mania VPN (через сайт)"
+    if purpose == "renew":
+        title = "Продление Coffee Mania VPN (через сайт)"
+    elif purpose == "device":
+        title = "Доп. устройство Coffee Mania VPN (через сайт)"
+    else:
+        title = "Подписка Coffee Mania VPN (через сайт)"
     parts = [title, email]
     if user_id is not None:
         parts.append(f"uid:{user_id}")
@@ -203,6 +213,34 @@ def _is_subscription_active(expires_at: str | None) -> bool:
     if parsed is None:
         return False
     return parsed > datetime.now()
+
+
+def _email_has_active_subscription(email: str) -> bool:
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT expires_at
+            FROM vpn_keys
+            WHERE email = ?
+            ORDER BY id DESC
+            """,
+            (email,),
+        )
+        for row in cur.fetchall():
+            if _is_subscription_active(row[0]):
+                return True
+    return False
+
+
+async def _provision_device_slots(email: str, slots: int) -> bool:
+    user_id = _get_user_id_by_email(email)
+    telegram_id = _get_telegram_id_by_email(email)
+    rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+    if not rw_user:
+        return False
+    ok, _ = await add_hwid_device_slots(rw_user, slots)
+    return ok
 
 
 def _upsert_vpn_key_from_remnawave(
@@ -1096,47 +1134,71 @@ async def create_payment(payment: PaymentRequest, request: Request): # обяз�
         )
 
     purpose = (payment.purpose or "subscription").strip().lower()
-    if purpose not in {"subscription", "renew"}:
+    if purpose not in {"subscription", "renew", "device"}:
         return JSONResponse(
             content={"status": "error", "message": "Некорректный тип оплаты"},
             status_code=400,
         )
-    duration_days = payment.duration_days or SUBSCRIPTION_DURATION_DAYS
-    expected_price = _plan_price(duration_days)
-    if expected_price is None or payment.amount != expected_price:
-        return JSONResponse(
-            content={"status": "error", "message": "Некорректная сумма или срок подписки"},
-            status_code=400,
-        )
-    
-    promo_code = normalize_referral_code(payment.promo_code)
-    if payment.promo_code and not promo_code:
-        return JSONResponse(
-            content={"status": "error", "message": "Промокод не может быть пустым"},
-            status_code=400,
-        )
-
-    if promo_code:
-        with connect() as con:
-            cur = con.cursor()
-            cur.execute(
-                "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
-                (promo_code,),
-            )
-            owner = cur.fetchone()
-        if not owner:
-            return JSONResponse(
-                content={"status": "error", "message": "Промокод не найден"},
-                status_code=400,
-            )
-        if owner[0] == payload["email"]:
-            return JSONResponse(
-                content={"status": "error", "message": "Нельзя использовать собственный реферальный промокод"},
-                status_code=400,
-            )
-        promo_code = owner[1]
 
     email = normalize_email(payload["email"])
+
+    if purpose == "device":
+        if payment.amount != DEVICE_SLOT_PRICE:
+            return JSONResponse(
+                content={"status": "error", "message": f"Некорректная сумма. Доп. устройство — {DEVICE_SLOT_PRICE} ₽"},
+                status_code=400,
+            )
+        if not _email_has_active_subscription(email):
+            return JSONResponse(
+                content={"status": "error", "message": "Сначала оформите или продлите подписку"},
+                status_code=400,
+            )
+        user_id = _get_user_id_by_email(email)
+        telegram_id = _get_telegram_id_by_email(email)
+        rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+        if not rw_user:
+            return JSONResponse(
+                content={"status": "error", "message": "Не найден аккаунт VPN для докупки устройства"},
+                status_code=400,
+            )
+        duration_days = DEVICE_SLOTS_PER_PURCHASE
+        promo_code = None
+    else:
+        duration_days = payment.duration_days or SUBSCRIPTION_DURATION_DAYS
+        expected_price = _plan_price(duration_days)
+        if expected_price is None or payment.amount != expected_price:
+            return JSONResponse(
+                content={"status": "error", "message": "Некорректная сумма или срок подписки"},
+                status_code=400,
+            )
+
+        promo_code = normalize_referral_code(payment.promo_code)
+        if payment.promo_code and not promo_code:
+            return JSONResponse(
+                content={"status": "error", "message": "Промокод не может быть пустым"},
+                status_code=400,
+            )
+
+        if promo_code:
+            with connect() as con:
+                cur = con.cursor()
+                cur.execute(
+                    "SELECT email, code FROM referral_codes WHERE UPPER(code) = UPPER(?) LIMIT 1",
+                    (promo_code,),
+                )
+                owner = cur.fetchone()
+            if not owner:
+                return JSONResponse(
+                    content={"status": "error", "message": "Промокод не найден"},
+                    status_code=400,
+                )
+            if owner[0] == email:
+                return JSONResponse(
+                    content={"status": "error", "message": "Нельзя использовать собственный реферальный промокод"},
+                    status_code=400,
+                )
+            promo_code = owner[1]
+
     user_id = _get_user_id_by_email(email)
     telegram_id = _get_telegram_id_by_email(email)
     payment_description = _yookassa_payment_description(
@@ -1158,6 +1220,8 @@ async def create_payment(payment: PaymentRequest, request: Request): # обяз�
         payment_metadata["promo_code"] = promo_code
     if purpose == "renew" and payment.subscription_id is not None:
         payment_metadata["subscription_id"] = str(payment.subscription_id)
+    if purpose == "device":
+        payment_metadata["device_slots"] = str(duration_days)
 
     return_url = f"{(frontend_url or 'http://localhost:3002').rstrip('/')}/profile"
 
@@ -1276,17 +1340,33 @@ async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
     purpose = (purpose or "subscription").strip().lower()
     subscription_id = subscription_id
     duration_days = int(duration_days_raw) if duration_days_raw else SUBSCRIPTION_DURATION_DAYS
-    if _plan_price(duration_days) is None:
+    if purpose == "device":
+        duration_days = DEVICE_SLOTS_PER_PURCHASE
+    elif _plan_price(duration_days) is None:
         duration_days = SUBSCRIPTION_DURATION_DAYS
 
     promo_code = _normalize_payment_promo_code(promo_code, email)
 
     if purpose == "renew":
         provisioned = await _provision_renew_subscription(email, subscription_id, duration_days)
+        success_message = None
+    elif purpose == "device":
+        slots = duration_days or DEVICE_SLOTS_PER_PURCHASE
+        provisioned = await _provision_device_slots(email, slots)
+        success_message = f"+{slots} устройство добавлено к подписке"
     else:
         provisioned = await _provision_new_subscription(email, duration_days)
+        success_message = None
 
     if not provisioned:
+        if purpose == "device":
+            return {
+                "status": "error",
+                "message": (
+                    "Оплата получена, но устройство пока не удалось добавить. "
+                    "Нажмите «Проверить оплату» ещё раз или напишите в поддержку."
+                ),
+            }
         return {
             "status": "error",
             "message": (
@@ -1315,7 +1395,9 @@ async def fulfill_payment(payment_id: str, email: Optional[str] = None) -> dict:
         cur.execute("DELETE FROM payment_contexts WHERE payment_id = ?", (payment_id,))
         con.commit()
 
-    return {"status": "success"}
+    if success_message:
+        return {"status": "success", "message": success_message, "purpose": purpose}
+    return {"status": "success", "purpose": purpose}
 
 
 @app.get("/check_payment")
@@ -1390,6 +1472,45 @@ async def get_vpn_keys(request: Request):
         rows = cur.fetchall()
 
     return [dict(r) for r in rows]
+
+
+@app.get("/devices")
+async def get_devices(request: Request):
+    token = request.cookies.get("token")
+    payload = verify_jwt(token)
+    if payload.get("status") == "error":
+        return JSONResponse(
+            content={"status": "error", "message": "Неверный email или пароль"},
+            status_code=401,
+        )
+
+    email = normalize_email(payload["email"])
+    if not _email_has_active_subscription(email):
+        return {
+            "active": False,
+            "devices_used": 0,
+            "devices_limit": 0,
+            "devices_available": 0,
+            "extra_slot_price": DEVICE_SLOT_PRICE,
+        }
+
+    user_id = _get_user_id_by_email(email)
+    telegram_id = _get_telegram_id_by_email(email)
+    stats = await get_account_device_stats(user_id, telegram_id)
+    if not stats:
+        return {
+            "active": False,
+            "devices_used": 0,
+            "devices_limit": 0,
+            "devices_available": 0,
+            "extra_slot_price": DEVICE_SLOT_PRICE,
+        }
+
+    return {
+        "active": True,
+        "extra_slot_price": DEVICE_SLOT_PRICE,
+        **stats,
+    }
 
 
 @app.get("/subscription")

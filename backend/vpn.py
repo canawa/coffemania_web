@@ -136,18 +136,32 @@ def remnawave_telegram_username(telegram_id: int) -> str:
     return f"user_{telegram_id}"
 
 
+def _parse_hwid_limit(user: dict | None, default: int = 3) -> int:
+    if not user:
+        return default
+    for key in ("hwidDeviceLimit", "hwid_device_limit"):
+        value = user.get(key)
+        if value is not None:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                pass
+    return default
+
+
 def _build_user_payload(
     username: str,
     expire_at_iso: str,
     email: str | None = None,
     telegram_id: int | None = None,
+    hwid_device_limit: int | None = None,
 ) -> dict[str, Any]:
     payload: dict[str, Any] = {
         "username": username,
         "trafficLimitBytes": TRAFFIC_LIMIT_BYTES_25_GB,
         "trafficLimitStrategy": TRAFFIC_LIMIT_STRATEGY_MONTH_ROLLING,
         "expireAt": expire_at_iso,
-        "hwidDeviceLimit": 3,
+        "hwidDeviceLimit": hwid_device_limit if hwid_device_limit is not None else 3,
     }
     if email:
         payload["email"] = email
@@ -274,6 +288,7 @@ async def attach_telegram_id_to_remnawave_user(
         expire_at_iso=expire_at,
         email=email or rw_user.get("email"),
         telegram_id=telegram_id,
+        hwid_device_limit=_parse_hwid_limit(rw_user),
     )
     update_payload["status"] = rw_user.get("status") or "ACTIVE"
     user_uuid = rw_user.get("uuid")
@@ -377,12 +392,14 @@ async def update_remnawave_user(
     email: str | None = None,
     user_uuid: str | None = None,
     telegram_id: int | None = None,
+    hwid_device_limit: int | None = None,
 ) -> tuple[dict | None, int, str]:
     update_payload = _build_user_payload(
         username=username,
         expire_at_iso=expire_at_iso,
         email=email,
         telegram_id=telegram_id,
+        hwid_device_limit=hwid_device_limit,
     )
     update_payload["status"] = "ACTIVE"
     if isinstance(user_uuid, str) and user_uuid.strip():
@@ -475,6 +492,7 @@ async def renew_vpn_key(
         email=email,
         user_uuid=fetched.get("uuid") if isinstance(fetched.get("uuid"), str) else None,
         telegram_id=telegram_id,
+        hwid_device_limit=_parse_hwid_limit(fetched),
     )
     if update_status >= 400 or not updated:
         print(f"remnawave renew failed: {update_status} | {update_error_text}")
@@ -486,3 +504,85 @@ async def renew_vpn_key(
         "expire": int(new_expire_dt.timestamp()),
         "username": username,
     }
+
+
+async def resolve_remnawave_account_user(
+    user_id: int | None,
+    telegram_id: int | None,
+) -> dict | None:
+    if telegram_id:
+        user = await fetch_remnawave_user_for_telegram(telegram_id)
+        if user:
+            return user
+    if user_id:
+        return await fetch_user_by_username(remnawave_username(user_id), quiet_not_found=True)
+    return None
+
+
+async def fetch_user_hwid_devices(user_uuid: str) -> tuple[int, list[dict]]:
+    data, status, error_text = await _request_json(
+        "GET",
+        f"/api/hwid/devices/get/{user_uuid}",
+    )
+    if status >= 400:
+        print(f"remnawave fetch hwid devices failed: {status} | {error_text[:300]}")
+        return 0, []
+
+    if not isinstance(data, dict):
+        return 0, []
+
+    nested = data.get("response")
+    if isinstance(nested, dict):
+        total = nested.get("total")
+        devices = nested.get("devices")
+        if isinstance(devices, list):
+            used = int(total) if isinstance(total, int) else len(devices)
+            return used, [item for item in devices if isinstance(item, dict)]
+    if isinstance(nested, list):
+        return len(nested), [item for item in nested if isinstance(item, dict)]
+
+    return 0, []
+
+
+async def get_account_device_stats(
+    user_id: int | None,
+    telegram_id: int | None,
+) -> dict | None:
+    rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+    if not rw_user:
+        return None
+
+    user_uuid = rw_user.get("uuid")
+    devices_used = 0
+    if isinstance(user_uuid, str) and user_uuid.strip():
+        devices_used, _ = await fetch_user_hwid_devices(user_uuid.strip())
+
+    devices_limit = _parse_hwid_limit(rw_user)
+    return {
+        "devices_used": devices_used,
+        "devices_limit": devices_limit,
+        "devices_available": max(0, devices_limit - devices_used),
+        "remnawave_username": rw_user.get("username"),
+    }
+
+
+async def add_hwid_device_slots(rw_user: dict, amount: int) -> tuple[bool, int]:
+    username = rw_user.get("username")
+    if not isinstance(username, str) or not username.strip():
+        return False, 0
+
+    current_limit = _parse_hwid_limit(rw_user)
+    new_limit = current_limit + amount
+    payload: dict[str, Any] = {
+        "username": username.strip(),
+        "hwidDeviceLimit": new_limit,
+    }
+    user_uuid = rw_user.get("uuid")
+    if isinstance(user_uuid, str) and user_uuid.strip():
+        payload["uuid"] = user_uuid.strip()
+
+    _, status, error_text = await _request_json("PATCH", "/api/users", payload)
+    if status >= 400:
+        print(f"remnawave add hwid devices failed: {status} | {error_text[:300]}")
+        return False, current_limit
+    return True, new_limit
