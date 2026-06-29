@@ -233,10 +233,36 @@ def _email_has_active_subscription(email: str) -> bool:
     return False
 
 
+def _get_active_vpn_username_for_email(email: str) -> str | None:
+    with connect() as con:
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT vpn_username, expires_at
+            FROM vpn_keys
+            WHERE email = ?
+            ORDER BY id DESC
+            """,
+            (email,),
+        )
+        for row in cur.fetchall():
+            username, expires_at = row[0], row[1]
+            if not _is_subscription_active(expires_at):
+                continue
+            if isinstance(username, str) and username.strip():
+                return username.strip()
+    return None
+
+
 async def _provision_device_slots(email: str, slots: int) -> bool:
     user_id = _get_user_id_by_email(email)
     telegram_id = _get_telegram_id_by_email(email)
-    rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+    preferred_username = _get_active_vpn_username_for_email(email)
+    rw_user = await resolve_remnawave_account_user(
+        user_id,
+        telegram_id,
+        preferred_username=preferred_username,
+    )
     if not rw_user:
         return False
     ok, _ = await add_hwid_device_slots(rw_user, slots)
@@ -1155,7 +1181,12 @@ async def create_payment(payment: PaymentRequest, request: Request): # обяз�
             )
         user_id = _get_user_id_by_email(email)
         telegram_id = _get_telegram_id_by_email(email)
-        rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+        preferred_username = _get_active_vpn_username_for_email(email)
+        rw_user = await resolve_remnawave_account_user(
+            user_id,
+            telegram_id,
+            preferred_username=preferred_username,
+        )
         if not rw_user:
             return JSONResponse(
                 content={"status": "error", "message": "Не найден аккаунт VPN для докупки устройства"},
@@ -1496,7 +1527,12 @@ async def get_devices(request: Request):
 
     user_id = _get_user_id_by_email(email)
     telegram_id = _get_telegram_id_by_email(email)
-    stats = await get_account_device_stats(user_id, telegram_id)
+    preferred_username = _get_active_vpn_username_for_email(email)
+    stats = await get_account_device_stats(
+        user_id,
+        telegram_id,
+        preferred_username=preferred_username,
+    )
     if not stats:
         return {
             "active": False,

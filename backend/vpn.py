@@ -506,10 +506,75 @@ async def renew_vpn_key(
     }
 
 
+def _coerce_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped.isdigit():
+            return int(stripped)
+        try:
+            return int(float(stripped))
+        except ValueError:
+            return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_user_uuid(user: dict | None) -> str | None:
+    if not user:
+        return None
+    for key in ("uuid", "userUuid", "user_uuid"):
+        value = user.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return None
+
+
+def _unwrap_hwid_devices_response(data: Any) -> tuple[int, list[dict]]:
+    if not isinstance(data, dict):
+        if isinstance(data, list):
+            devices = [item for item in data if isinstance(item, dict)]
+            return len(devices), devices
+        return 0, []
+
+    blocks: list[Any] = [data]
+    for key in ("response", "data"):
+        nested = data.get(key)
+        if isinstance(nested, dict):
+            blocks.append(nested)
+        elif isinstance(nested, list):
+            devices = [item for item in nested if isinstance(item, dict)]
+            return len(devices), devices
+
+    for block in blocks:
+        if not isinstance(block, dict):
+            continue
+        devices_raw = block.get("devices")
+        if isinstance(devices_raw, list):
+            devices = [item for item in devices_raw if isinstance(item, dict)]
+            total = _coerce_int(block.get("total"))
+            return total if total is not None else len(devices), devices
+
+    return 0, []
+
+
 async def resolve_remnawave_account_user(
     user_id: int | None,
     telegram_id: int | None,
+    preferred_username: str | None = None,
 ) -> dict | None:
+    if isinstance(preferred_username, str) and preferred_username.strip():
+        user = await fetch_user_by_username(preferred_username.strip(), quiet_not_found=True)
+        if user:
+            return user
+
     if telegram_id:
         user = await fetch_remnawave_user_for_telegram(telegram_id)
         if user:
@@ -525,37 +590,43 @@ async def fetch_user_hwid_devices(user_uuid: str) -> tuple[int, list[dict]]:
         f"/api/hwid/devices/get/{user_uuid}",
     )
     if status >= 400:
-        print(f"remnawave fetch hwid devices failed: {status} | {error_text[:300]}")
+        print(
+            f"remnawave fetch hwid devices failed for {user_uuid}: "
+            f"{status} | {error_text[:300]}",
+        )
         return 0, []
 
-    if not isinstance(data, dict):
-        return 0, []
-
-    nested = data.get("response")
-    if isinstance(nested, dict):
-        total = nested.get("total")
-        devices = nested.get("devices")
-        if isinstance(devices, list):
-            used = int(total) if isinstance(total, int) else len(devices)
-            return used, [item for item in devices if isinstance(item, dict)]
-    if isinstance(nested, list):
-        return len(nested), [item for item in nested if isinstance(item, dict)]
-
-    return 0, []
+    used, devices = _unwrap_hwid_devices_response(data)
+    if used == 0 and isinstance(data, dict):
+        print(
+            f"[remnawave] hwid devices parsed as 0 for {user_uuid}, "
+            f"keys={sorted(data.keys())}",
+        )
+    return used, devices
 
 
 async def get_account_device_stats(
     user_id: int | None,
     telegram_id: int | None,
+    preferred_username: str | None = None,
 ) -> dict | None:
-    rw_user = await resolve_remnawave_account_user(user_id, telegram_id)
+    rw_user = await resolve_remnawave_account_user(
+        user_id,
+        telegram_id,
+        preferred_username=preferred_username,
+    )
     if not rw_user:
         return None
 
-    user_uuid = rw_user.get("uuid")
+    user_uuid = _extract_user_uuid(rw_user)
     devices_used = 0
-    if isinstance(user_uuid, str) and user_uuid.strip():
-        devices_used, _ = await fetch_user_hwid_devices(user_uuid.strip())
+    if user_uuid:
+        devices_used, _ = await fetch_user_hwid_devices(user_uuid)
+    else:
+        print(
+            f"[remnawave] no uuid for user {rw_user.get('username')}, "
+            f"keys={sorted(rw_user.keys())}",
+        )
 
     devices_limit = _parse_hwid_limit(rw_user)
     return {
