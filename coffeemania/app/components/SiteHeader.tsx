@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch, API_BASE_URL } from "@/lib/apiFetch";
 
-type HeaderTab = "home" | "prices";
+type HeaderTab = "home" | "prices" | "download";
 
 export default function SiteHeader(props: { activeTab?: HeaderTab; logoClassName?: string }) {
   const { activeTab, logoClassName = "dark:brightness-0 dark:invert" } = props;
@@ -56,6 +56,9 @@ export default function SiteHeader(props: { activeTab?: HeaderTab; logoClassName
           </Link>
           <Link className={tabClass("prices")} href="/#prices">
             Цены
+          </Link>
+          <Link className={tabClass("download")} href="/download">
+            Скачать
           </Link>
         </div>
         <button

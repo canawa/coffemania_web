@@ -703,15 +703,8 @@ export default function ProfilePage() {
                           <div className="rounded-xl bg-surface-container-low px-4 py-3 sm:col-span-2">
                             <p className="text-xs uppercase tracking-wide text-on-surface-variant">Устройства</p>
                             <p className="text-sm font-semibold text-primary mt-1">
-                              {deviceInfo?.active
-                                ? `${deviceInfo.devices_used} из ${deviceInfo.devices_limit} задействовано`
-                                : "—"}
+                              {deviceInfo?.active ? deviceInfo.devices_limit : "—"}
                             </p>
-                            {deviceInfo?.active ? (
-                              <p className="text-xs text-on-surface-variant mt-1">
-                                Свободно слотов: {deviceInfo.devices_available}
-                              </p>
-                            ) : null}
                           </div>
                         </div>
 

@@ -86,6 +86,13 @@ export default function Home() {
             >
               Цены
             </a>
+            <Link
+              href="/download"
+              onClick={() => setActiveTab('download')}
+              className={`pb-1 transition-colors duration-300 border-b-2 ${activeTab === 'download' ? 'text-[#3D1C1C] dark:text-[#ffba38] font-bold border-[#3D1C1C] dark:border-[#ffba38]' : 'text-[#B09080] dark:text-[#8c7a72] border-transparent hover:text-[#3D1C1C] dark:hover:text-[#f2e8df]'}`}
+            >
+              Скачать
+            </Link>
           </div>
           <div className="ml-auto md:ml-0 flex items-center gap-2 sm:gap-3 shrink-0 md:justify-self-end">
             <ThemeToggle isDark={isDark} onChange={setTheme} />
