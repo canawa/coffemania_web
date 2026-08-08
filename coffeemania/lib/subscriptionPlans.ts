@@ -24,7 +24,7 @@ export const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
     label: "12 месяцев",
     periodLabel: "365 дней",
     days: 365,
-    price: 899,
+    price: 1199,
     discount: "−50%",
   },
 ];
